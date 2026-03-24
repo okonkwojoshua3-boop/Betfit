@@ -1,12 +1,14 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import { useBetStore } from './useBetStore'
+import { useAuth } from './AuthContext'
 
 type BetStoreReturn = ReturnType<typeof useBetStore>
 
 const BetContext = createContext<BetStoreReturn | null>(null)
 
 export function BetProvider({ children }: { children: ReactNode }) {
-  const store = useBetStore()
+  const { user } = useAuth()
+  const store = useBetStore(user?.id)
   return <BetContext.Provider value={store}>{children}</BetContext.Provider>
 }
 

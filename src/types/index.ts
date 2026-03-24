@@ -39,7 +39,31 @@ export interface PunishmentAssignment {
   reps: number
 }
 
-export type BetStatus = 'active' | 'punishment_pending' | 'completed'
+export type BetStatus = 'pending' | 'active' | 'punishment_pending' | 'completed'
+
+export interface Player {
+  id: string
+  name: string
+  createdAt: string
+}
+
+export interface BetProof {
+  betId: string
+  fileUrl: string        // Supabase Storage signed URL
+  uploadedAt: string
+  status: 'pending_review' | 'approved' | 'rejected'
+  rejectionNote?: string
+}
+
+export interface AppNotification {
+  id: string
+  betId: string
+  message: string
+  loserName: string
+  punishment: string
+  createdAt: string
+  read: boolean
+}
 
 export interface Participant {
   name: string
@@ -49,6 +73,8 @@ export interface Participant {
 export interface Bet {
   id: string
   matchId: string
+  creatorId?: string     // Supabase user ID
+  opponentId?: string    // Supabase user ID
   creator: Participant
   opponent: Participant
   punishment: PunishmentAssignment

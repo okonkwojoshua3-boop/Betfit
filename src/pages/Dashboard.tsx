@@ -1,12 +1,16 @@
 import { useNavigate } from 'react-router-dom'
 import { useBets } from '../store/BetContext'
 import BetCard from '../components/bets/BetCard'
+import { getMatchById } from '../data/matches'
+import { getPunishmentById } from '../data/punishments'
+import SportIcon from '../components/ui/SportIcon'
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { getActiveBets, bets } = useBets()
+  const { getActiveBets, getPendingBets, acceptBet, declineBet, bets } = useBets()
   const activeBets = getActiveBets()
-  const pendingCount = activeBets.filter((b) => b.status === 'punishment_pending').length
+  const pendingBets = getPendingBets()
+  const dueCount = activeBets.filter((b) => b.status === 'punishment_pending').length
   const totalCompleted = bets.filter((b) => b.status === 'completed').length
 
   return (
@@ -25,9 +29,9 @@ export default function Dashboard() {
           <div className="text-3xl font-black text-white">{activeBets.length}</div>
           <div className="text-xs text-slate-400 mt-0.5 uppercase tracking-wide">Active</div>
         </div>
-        <div className={`bg-slate-800 border border-t-2 rounded-xl p-4 text-center transition-colors ${pendingCount > 0 ? 'border-red-500/40 border-t-red-500 shadow-sm shadow-red-500/10' : 'border-slate-700 border-t-slate-600'}`}>
-          <div className={`text-3xl font-black transition-colors ${pendingCount > 0 ? 'text-red-400' : 'text-white'}`}>
-            {pendingCount}
+        <div className={`bg-slate-800 border border-t-2 rounded-xl p-4 text-center transition-colors ${dueCount > 0 ? 'border-red-500/40 border-t-red-500 shadow-sm shadow-red-500/10' : 'border-slate-700 border-t-slate-600'}`}>
+          <div className={`text-3xl font-black transition-colors ${dueCount > 0 ? 'text-red-400' : 'text-white'}`}>
+            {dueCount}
           </div>
           <div className="text-xs text-slate-400 mt-0.5 uppercase tracking-wide">Due</div>
         </div>
@@ -36,6 +40,63 @@ export default function Dashboard() {
           <div className="text-xs text-slate-400 mt-0.5 uppercase tracking-wide">Done</div>
         </div>
       </div>
+
+      {/* Pending bets — awaiting acceptance */}
+      {pendingBets.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+            Pending
+            <span className="bg-amber-500 text-black text-xs font-bold rounded-full w-5 h-5 inline-flex items-center justify-center">
+              {pendingBets.length}
+            </span>
+          </h2>
+          <div className="space-y-3">
+            {pendingBets.map((bet) => {
+              const match = getMatchById(bet.matchId)
+              const punishment = getPunishmentById(bet.punishment.punishmentId)
+              if (!match || !punishment) return null
+              return (
+                <div
+                  key={bet.id}
+                  className="bg-slate-800 border border-amber-500/30 rounded-xl p-4"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <SportIcon sport={match.sport} size="sm" />
+                        <span className="text-white font-semibold text-sm">
+                          {match.homeTeam.name} vs {match.awayTeam.name}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        {bet.creator.name} challenged {bet.opponent.name} ·{' '}
+                        <span className="text-amber-400">{bet.punishment.reps} {punishment.name}</span>
+                      </p>
+                    </div>
+                    <span className="text-xs text-amber-400 font-semibold bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-lg shrink-0">
+                      Pending
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => acceptBet(bet.id)}
+                      className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold py-2 rounded-lg transition-colors"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => declineBet(bet.id)}
+                      className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-semibold py-2 rounded-lg transition-colors border border-slate-600"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Active bets */}
       <div className="flex items-center justify-between mb-4">

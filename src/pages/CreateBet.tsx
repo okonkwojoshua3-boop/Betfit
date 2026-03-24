@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { MATCHES } from '../data/matches'
 import { PUNISHMENTS } from '../data/punishments'
 import { useBets } from '../store/BetContext'
+import { usePlayers } from '../store/PlayerContext'
+import { useAuth } from '../store/AuthContext'
 import { useLiveMatches } from '../hooks/useLiveMatches'
 import { saveMatch } from '../store/matchStore'
-import type { Bet, Match, Sport } from '../types'
+import type { Match, Sport } from '../types'
+import type { Profile } from '../store/AuthContext'
 import SportIcon from '../components/ui/SportIcon'
 
 type Step = 1 | 2 | 3 | 4
@@ -35,8 +38,17 @@ const INITIAL: WizardState = {
 export default function CreateBet() {
   const navigate = useNavigate()
   const { addBet } = useBets()
+  const { players, searchUsers } = usePlayers()
+  const { profile } = useAuth()
   const [step, setStep] = useState<Step>(1)
-  const [state, setState] = useState<WizardState>(INITIAL)
+  const [state, setState] = useState<WizardState>(() => ({
+    ...INITIAL,
+    // Auto-fill creator from current user
+    creatorName: profile?.username ?? '',
+  }))
+  const [opponentQuery, setOpponentQuery] = useState('')
+  const [opponentResults, setOpponentResults] = useState<Profile[]>([])
+  const [selectedOpponent, setSelectedOpponent] = useState<Profile | null>(null)
   const liveMatches = useLiveMatches()
 
   const update = (patch: Partial<WizardState>) =>
@@ -56,25 +68,41 @@ export default function CreateBet() {
       : allMatches.filter((m) => m.sport === state.sportFilter)
 
   function canNext(): boolean {
-    if (step === 1) return state.creatorName.trim() !== '' && state.opponentName.trim() !== ''
+    if (step === 1) return !!profile && !!selectedOpponent
     if (step === 2) return state.selectedMatchId !== ''
     if (step === 3) return state.creatorPickId !== '' && state.opponentPickId !== ''
     if (step === 4) return state.punishmentId !== '' && state.punishmentReps > 0
     return false
   }
 
-  function handleCreate() {
+  async function handleOpponentSearch(query: string) {
+    setOpponentQuery(query)
+    if (query.trim().length < 2) {
+      setOpponentResults(players.filter((p) => p.id !== profile?.id))
+      return
+    }
+    const results = await searchUsers(query)
+    setOpponentResults(results.filter((p) => p.id !== profile?.id))
+  }
+
+  function handleSelectOpponent(p: Profile) {
+    setSelectedOpponent(p)
+    update({ opponentName: p.username })
+    setOpponentQuery(p.username)
+    setOpponentResults([])
+  }
+
+  async function handleCreate() {
     if (selectedMatch) saveMatch(selectedMatch)
-    const bet: Bet = {
-      id: `bet-${Date.now()}`,
+    await addBet({
       matchId: state.selectedMatchId,
+      creatorId: profile?.id,
+      opponentId: selectedOpponent?.id,
       creator: { name: state.creatorName.trim(), teamPickId: state.creatorPickId },
       opponent: { name: state.opponentName.trim(), teamPickId: state.opponentPickId },
       punishment: { punishmentId: state.punishmentId, reps: state.punishmentReps },
-      status: 'active',
-      createdAt: new Date().toISOString(),
-    }
-    addBet(bet)
+      status: 'pending',
+    })
     navigate('/dashboard')
   }
 
@@ -124,27 +152,86 @@ export default function CreateBet() {
 
       {/* Step 1: Players */}
       {step === 1 && (
-        <div className="space-y-4 animate-slide-up">
+        <div className="space-y-5 animate-slide-up">
           <h2 className="text-lg font-bold text-white">Who's betting?</h2>
+
+          {/* Creator — locked to current user */}
           <div>
-            <label className="text-sm text-slate-400 mb-1.5 block">Player 1 (You)</label>
-            <input
-              type="text"
-              value={state.creatorName}
-              onChange={(e) => update({ creatorName: e.target.value })}
-              placeholder="Enter your name..."
-              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-200"
-            />
+            <label className="text-sm text-slate-400 mb-2 block">You</label>
+            <div className="bg-slate-800 border border-emerald-500/40 rounded-xl px-4 py-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-sm">
+                {profile?.username?.[0]?.toUpperCase()}
+              </div>
+              <span className="text-white font-semibold">{profile?.username}</span>
+              <span className="ml-auto text-xs text-emerald-400">You</span>
+            </div>
           </div>
+
+          {/* Opponent — search by username */}
           <div>
-            <label className="text-sm text-slate-400 mb-1.5 block">Player 2 (Friend)</label>
+            <label className="text-sm text-slate-400 mb-2 block">Opponent</label>
             <input
               type="text"
-              value={state.opponentName}
-              onChange={(e) => update({ opponentName: e.target.value })}
-              placeholder="Enter friend's name..."
-              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-200"
+              value={opponentQuery}
+              onChange={(e) => handleOpponentSearch(e.target.value)}
+              placeholder="Search by username…"
+              className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
             />
+
+            {/* Search results */}
+            {opponentResults.length > 0 && !selectedOpponent && (
+              <div className="mt-2 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+                {opponentResults.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => handleSelectOpponent(p)}
+                    className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-slate-700 transition-colors border-b border-slate-700/50 last:border-0"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-bold text-xs">
+                      {p.username[0].toUpperCase()}
+                    </div>
+                    <span className="text-white text-sm">{p.username}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Show all users on focus with no query */}
+            {opponentQuery === '' && opponentResults.length === 0 && players.filter(p => p.id !== profile?.id).length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {players.filter(p => p.id !== profile?.id).map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => handleSelectOpponent(p)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+                      selectedOpponent?.id === p.id
+                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+                        : 'bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-400'
+                    }`}
+                  >
+                    {selectedOpponent?.id === p.id && '✓ '}{p.username}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {selectedOpponent && (
+              <div className="mt-2 flex items-center gap-2">
+                <p className="text-xs text-emerald-400 flex-1">
+                  ✓ Playing against <span className="font-semibold">{selectedOpponent.username}</span>
+                </p>
+                <button
+                  onClick={() => {
+                    setSelectedOpponent(null)
+                    setOpponentQuery('')
+                    update({ opponentName: '' })
+                  }}
+                  className="text-xs text-slate-500 hover:text-slate-300"
+                >
+                  Change
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

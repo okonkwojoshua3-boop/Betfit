@@ -1,10 +1,14 @@
 import { NavLink } from 'react-router-dom'
 import { useBets } from '../../store/BetContext'
+import { useAuth } from '../../store/AuthContext'
 
 export default function Navbar() {
-  const { getActiveBets } = useBets()
+  const { getActiveBets, getPendingBets } = useBets()
+  const { profile, signOut } = useAuth()
   const activeBets = getActiveBets()
-  const pendingCount = activeBets.filter((b) => b.status === 'punishment_pending').length
+  const pendingBets = getPendingBets()
+  const dueCount = activeBets.filter((b) => b.status === 'punishment_pending').length
+  const pendingCount = pendingBets.length + dueCount
 
   return (
     <nav className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-slate-800/80 shadow-sm">
@@ -49,11 +53,34 @@ export default function Navbar() {
           </NavLink>
 
           <NavLink
+            to="/leaderboard"
+            className={({ isActive }) =>
+              `px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                isActive
+                  ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`
+            }
+          >
+            Leaderboard
+          </NavLink>
+
+          <NavLink
             to="/create"
             className="ml-2 px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-sm hover:shadow-emerald-500/30 hover:shadow-md"
           >
             + New Bet
           </NavLink>
+
+          {profile && (
+            <button
+              onClick={signOut}
+              title={`Signed in as ${profile.username}`}
+              className="ml-1 w-8 h-8 rounded-full bg-slate-700 hover:bg-slate-600 border border-slate-600 flex items-center justify-center text-slate-300 font-bold text-sm transition-colors"
+            >
+              {profile.username[0].toUpperCase()}
+            </button>
+          )}
         </div>
       </div>
     </nav>

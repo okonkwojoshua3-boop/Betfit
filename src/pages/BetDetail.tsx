@@ -1,12 +1,220 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useBets } from '../store/BetContext'
 import { getMatchById } from '../data/matches'
 import { getPunishmentById, formatPunishment } from '../data/punishments'
+import { useProof } from '../hooks/useProof'
 import PunishmentBanner from '../components/bets/PunishmentBanner'
 import Badge from '../components/ui/Badge'
 import SportIcon from '../components/ui/SportIcon'
+import type { Match } from '../types'
 
+// ── Match status helper ───────────────────────────────────────────────────────
+function MatchStatusBadge({ match }: { match: Match }) {
+  if (match.status === 'live') {
+    return (
+      <span className="flex items-center gap-1 text-xs font-bold text-red-400">
+        <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />
+        LIVE
+      </span>
+    )
+  }
+  if (match.result || match.status === 'finished') {
+    return <span className="text-xs font-bold text-slate-400 bg-slate-700 px-2 py-0.5 rounded">FT</span>
+  }
+  const kickoff = new Date(match.scheduledAt)
+  const now = new Date()
+  if (kickoff > now) {
+    return (
+      <span className="text-xs text-slate-500">
+        {kickoff.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}{' '}
+        {kickoff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+      </span>
+    )
+  }
+  return <span className="text-xs text-slate-500 italic">Awaiting result</span>
+}
+
+// ── Proof section ─────────────────────────────────────────────────────────────
+function ProofSection({
+  betId,
+  loserName,
+  winnerName,
+  punishmentText,
+  onApproved,
+}: {
+  betId: string
+  loserName: string
+  winnerName: string
+  punishmentText: string
+  onApproved: () => void
+}) {
+  const { proof, uploading, uploadProof, approveProof, rejectProof, clearProof } = useProof(betId)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [rejectNote, setRejectNote] = useState('')
+  const [showRejectInput, setShowRejectInput] = useState(false)
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    uploadProof(file)
+  }
+
+  function handleApprove() {
+    approveProof()
+    onApproved()
+  }
+
+  function handleReject() {
+    if (!rejectNote.trim()) return
+    rejectProof(rejectNote.trim())
+    setShowRejectInput(false)
+    setRejectNote('')
+  }
+
+  // No proof yet — show upload
+  if (!proof || !proof.fileUrl) {
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xl">📸</span>
+          <h3 className="font-bold text-white">Upload Proof</h3>
+        </div>
+        <p className="text-sm text-slate-400 mb-4">
+          <span className="text-amber-400 font-semibold">{loserName}</span> — take a photo showing you completed{' '}
+          <span className="text-white font-semibold">{punishmentText}</span>.
+        </p>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-black font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+        >
+          {uploading ? 'Uploading…' : '📷 Choose / Take Photo'}
+        </button>
+        <p className="text-xs text-slate-600 text-center mt-2">Photos only · Stored securely in the cloud.</p>
+      </div>
+    )
+  }
+
+  // Proof rejected — show rejection + re-upload
+  if (proof.status === 'rejected') {
+    return (
+      <div className="bg-slate-800 border border-red-500/30 rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xl">❌</span>
+          <h3 className="font-bold text-red-400">Proof Rejected</h3>
+        </div>
+        {proof.rejectionNote && (
+          <p className="text-sm text-slate-300 bg-slate-900 rounded-xl px-4 py-3 mb-4 border border-slate-700">
+            "{proof.rejectionNote}"
+          </p>
+        )}
+        <img
+          src={proof.fileUrl}
+          alt="Rejected proof"
+          className="w-full rounded-xl mb-4 opacity-40 grayscale"
+        />
+        <p className="text-sm text-slate-400 mb-3">
+          {winnerName} rejected this. Try again, {loserName}.
+        </p>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => {
+            clearProof()
+            handleFileChange(e)
+          }}
+        />
+        <button
+          onClick={() => fileRef.current?.click()}
+          className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 rounded-xl transition-colors"
+        >
+          📷 Re-upload Proof
+        </button>
+      </div>
+    )
+  }
+
+  // Proof pending review — show photo + approve/reject
+  return (
+    <div className="bg-slate-800 border border-emerald-500/20 rounded-2xl p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xl">🔍</span>
+        <h3 className="font-bold text-white">Review Proof</h3>
+        <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full ml-auto">
+          Awaiting approval
+        </span>
+      </div>
+
+      <img
+        src={proof.fileUrl}
+        alt="Punishment proof"
+        className="w-full rounded-xl mb-3 object-cover max-h-72"
+      />
+
+      <p className="text-xs text-slate-500 mb-4">
+        Uploaded {new Date(proof.uploadedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+      </p>
+
+      {!showRejectInput ? (
+        <div className="flex gap-2">
+          <button
+            onClick={handleApprove}
+            className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-3 rounded-xl transition-colors"
+          >
+            ✅ Approve
+          </button>
+          <button
+            onClick={() => setShowRejectInput(true)}
+            className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-3 rounded-xl transition-colors border border-slate-600"
+          >
+            ❌ Reject
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={rejectNote}
+            onChange={(e) => setRejectNote(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleReject()}
+            placeholder="Reason for rejection..."
+            autoFocus
+            className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setShowRejectInput(false); setRejectNote('') }}
+              className="flex-1 bg-slate-700 text-slate-300 font-medium py-2.5 rounded-xl text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleReject}
+              disabled={!rejectNote.trim()}
+              className="flex-1 bg-red-500 hover:bg-red-400 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+            >
+              Confirm Reject
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main BetDetail page ───────────────────────────────────────────────────────
 export default function BetDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -19,7 +227,10 @@ export default function BetDetail() {
   const [showModal, setShowModal] = useState(false)
   const [homeScore, setHomeScore] = useState('')
   const [awayScore, setAwayScore] = useState('')
-  const [winnerOverride, setWinnerOverride] = useState<string>('score') // 'score' | team id | 'draw'
+  const [winnerOverride, setWinnerOverride] = useState<string>('score')
+
+  // Controls whether PunishmentBanner is showing (true on first visit when punishment_pending)
+  const [showBanner, setShowBanner] = useState(true)
 
   if (!bet || !match || !punishment) {
     return (
@@ -59,13 +270,9 @@ export default function BetDetail() {
     setShowModal(false)
   }
 
-  function handleAcknowledge() {
-    if (id) acknowledgePunishment(id)
-  }
-
-  // Full-screen punishment reveal
-  if (bet.status === 'punishment_pending' && bet.loserId && bet.loserId !== 'draw') {
-    return <PunishmentBanner bet={bet} onDone={handleAcknowledge} />
+  // Show dramatic punishment reveal banner (first visit only)
+  if (bet.status === 'punishment_pending' && bet.loserId && bet.loserId !== 'draw' && showBanner) {
+    return <PunishmentBanner bet={bet} onDone={() => setShowBanner(false)} />
   }
 
   return (
@@ -84,7 +291,10 @@ export default function BetDetail() {
             <SportIcon sport={match.sport} />
             <span className="text-slate-400 text-sm capitalize">{match.sport}</span>
           </div>
-          <Badge status={bet.status} />
+          <div className="flex items-center gap-2">
+            <MatchStatusBadge match={match} />
+            <Badge status={bet.status} />
+          </div>
         </div>
 
         <div className="flex items-center justify-center gap-4 mb-4">
@@ -102,13 +312,6 @@ export default function BetDetail() {
             ) : (
               <div className="text-slate-500 font-bold text-lg">VS</div>
             )}
-            <div className="text-xs text-slate-500 mt-1">
-              {new Date(match.scheduledAt).toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-              })}
-            </div>
           </div>
 
           <div className="text-center">
@@ -171,7 +374,20 @@ export default function BetDetail() {
         )}
       </div>
 
-      {/* Action */}
+      {/* Proof upload / review section */}
+      {bet.status === 'punishment_pending' && loserName && winnerName && (
+        <div className="mb-4">
+          <ProofSection
+            betId={bet.id}
+            loserName={loserName}
+            winnerName={winnerName}
+            punishmentText={formatPunishment(punishment, bet.punishment.reps)}
+            onApproved={() => acknowledgePunishment(bet.id)}
+          />
+        </div>
+      )}
+
+      {/* Enter result (active bets) */}
       {bet.status === 'active' && (
         <button
           onClick={() => setShowModal(true)}
@@ -181,6 +397,7 @@ export default function BetDetail() {
         </button>
       )}
 
+      {/* Completed state */}
       {bet.status === 'completed' && (
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
@@ -199,7 +416,7 @@ export default function BetDetail() {
         </div>
       )}
 
-      {/* Result modal */}
+      {/* Result entry modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
           <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6">
@@ -231,7 +448,6 @@ export default function BetDetail() {
               </div>
             </div>
 
-            {/* Manual override for draws or unusual cases */}
             <div className="mb-5">
               <label className="text-xs text-slate-400 mb-2 block">Winner (override if needed)</label>
               <div className="flex flex-wrap gap-2">

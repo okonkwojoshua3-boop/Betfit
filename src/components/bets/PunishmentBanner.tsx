@@ -70,8 +70,11 @@ export default function PunishmentBanner({ bet, onDone }: Props) {
           onClick={onDone}
           className="w-full bg-red-500 hover:bg-red-400 active:bg-red-600 text-white font-bold py-4 rounded-xl text-lg transition-all duration-200 shadow-lg shadow-red-500/20 hover:shadow-red-500/30"
         >
-          ✅ Done — I've Paid My Dues!
+          📸 Upload Proof
         </button>
+        <p className="text-slate-600 text-xs text-center">
+          Take a photo as proof — your opponent must approve it.
+        </p>
       </div>
     </div>
   )

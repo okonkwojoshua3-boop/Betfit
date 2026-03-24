@@ -1,9 +1,32 @@
 import { useNavigate } from 'react-router-dom'
-import type { Bet } from '../../types'
+import type { Bet, Match } from '../../types'
 import { getMatchById } from '../../data/matches'
 import { getPunishmentById } from '../../data/punishments'
 import Badge from '../ui/Badge'
 import SportIcon from '../ui/SportIcon'
+
+function MatchStatusPip({ match }: { match: Match }) {
+  if (match.status === 'live') {
+    return (
+      <span className="flex items-center gap-1 text-xs font-bold text-red-400">
+        <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />
+        LIVE
+      </span>
+    )
+  }
+  if (match.result || match.status === 'finished') {
+    return <span className="text-xs font-bold text-slate-500 bg-slate-700/60 px-1.5 py-0.5 rounded">FT</span>
+  }
+  const kickoff = new Date(match.scheduledAt)
+  if (kickoff > new Date()) {
+    return (
+      <span className="text-xs text-slate-500">
+        {kickoff.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+      </span>
+    )
+  }
+  return <span className="text-xs text-slate-600 italic">Awaiting result</span>
+}
 
 export default function BetCard({ bet }: { bet: Bet }) {
   const navigate = useNavigate()
@@ -43,19 +66,23 @@ export default function BetCard({ bet }: { bet: Bet }) {
       </div>
 
       {/* Match */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-1">
         <span className="font-semibold text-white text-sm truncate">
           {match.homeTeam.name}
         </span>
-        <span className="shrink-0 bg-slate-700 text-slate-400 text-xs font-bold px-1.5 py-0.5 rounded">VS</span>
+        {match.result ? (
+          <span className="shrink-0 text-sm font-black text-white tabular-nums">
+            {match.result.homeScore}–{match.result.awayScore}
+          </span>
+        ) : (
+          <span className="shrink-0 bg-slate-700 text-slate-400 text-xs font-bold px-1.5 py-0.5 rounded">VS</span>
+        )}
         <span className="font-semibold text-white text-sm truncate">
           {match.awayTeam.name}
         </span>
-        {match.result && (
-          <span className="ml-auto shrink-0 text-sm font-black text-white tabular-nums">
-            {match.result.homeScore}–{match.result.awayScore}
-          </span>
-        )}
+      </div>
+      <div className="mb-3">
+        <MatchStatusPip match={match} />
       </div>
 
       {/* Picks */}
