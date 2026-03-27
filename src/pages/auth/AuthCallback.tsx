@@ -11,6 +11,13 @@ export default function AuthCallback() {
     const hash = window.location.hash
     const code = new URLSearchParams(search).get('code')
 
+    // Check for error params returned by Supabase
+    const errorDescription = new URLSearchParams(search).get('error_description')
+    if (errorDescription) {
+      setError(decodeURIComponent(errorDescription.replace(/\+/g, ' ')))
+      return
+    }
+
     console.log('[AuthCallback] search:', search)
     console.log('[AuthCallback] hash:', hash)
     console.log('[AuthCallback] code:', code)
