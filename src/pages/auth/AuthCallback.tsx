@@ -8,13 +8,11 @@ export default function AuthCallback() {
   useEffect(() => {
     // Supabase will exchange the ?code= for a session automatically.
     // onAuthStateChange fires SIGNED_IN once that's done.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN') {
-        navigate('/dashboard', { replace: true })
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) navigate('/dashboard', { replace: true })
     })
 
-    // Fallback: if already signed in (e.g. session still valid), go straight to dashboard
+    // Catch the case where session is already established before subscription fired
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) navigate('/dashboard', { replace: true })
     })
