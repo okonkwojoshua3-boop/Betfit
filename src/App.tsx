@@ -10,6 +10,7 @@ import BetDetail from './pages/BetDetail'
 import History from './pages/History'
 import Leaderboard from './pages/Leaderboard'
 import LoginPage from './pages/auth/LoginPage'
+import AuthCallback from './pages/auth/AuthCallback'
 import NotificationBanner from './components/ui/NotificationBanner'
 import { useMatchSync } from './hooks/useMatchSync'
 
@@ -77,6 +78,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/*" element={<AuthGuard />} />
         </Routes>
       </BrowserRouter>
