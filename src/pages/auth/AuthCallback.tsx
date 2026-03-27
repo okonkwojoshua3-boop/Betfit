@@ -6,18 +6,23 @@ export default function AuthCallback() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Supabase will exchange the ?code= for a session automatically.
-    // onAuthStateChange fires SIGNED_IN once that's done.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) navigate('/dashboard', { replace: true })
-    })
+    const code = new URLSearchParams(window.location.search).get('code')
 
-    // Catch the case where session is already established before subscription fired
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate('/dashboard', { replace: true })
-    })
-
-    return () => subscription.unsubscribe()
+    if (code) {
+      // Explicitly exchange the PKCE code for a session
+      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+        if (error || !data.session) {
+          navigate('/login', { replace: true })
+        } else {
+          navigate('/dashboard', { replace: true })
+        }
+      })
+    } else {
+      // No code in URL — check if session already exists
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        navigate(session ? '/dashboard' : '/login', { replace: true })
+      })
+    }
   }, [navigate])
 
   return (
