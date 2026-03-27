@@ -20,8 +20,7 @@ interface AuthStore {
   user: User | null
   profile: Profile | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<string | null>
-  signUp: (email: string, password: string, username: string) => Promise<string | null>
+  signInWithGoogle: () => Promise<string | null>
   signOut: () => Promise<void>
 }
 
@@ -42,14 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
-      setLoading(false)
-    })
-
-    // Listen for auth state changes
+    // onAuthStateChange fires on page load (including after OAuth redirect),
+    // so we use it as the single source of truth instead of getSession()
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
@@ -57,34 +50,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setProfile(null)
       }
+      setLoading(false)
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
-  const signIn = useCallback(async (email: string, password: string): Promise<string | null> => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return error?.message ?? null
-  }, [])
-
-  const signUp = useCallback(async (
-    email: string,
-    password: string,
-    username: string,
-  ): Promise<string | null> => {
-    // Check username is available
-    const { data: existing } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('username', username.trim())
-      .maybeSingle()
-
-    if (existing) return 'Username already taken'
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { username: username.trim() } },
+  const signInWithGoogle = useCallback(async (): Promise<string | null> => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/dashboard' },
     })
     return error?.message ?? null
   }, [])
@@ -94,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   )
