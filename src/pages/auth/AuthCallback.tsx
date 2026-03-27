@@ -9,16 +9,19 @@ export default function AuthCallback() {
     const code = new URLSearchParams(window.location.search).get('code')
 
     if (code) {
-      // Explicitly exchange the PKCE code for a session
       supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
-        if (error || !data.session) {
+        if (error) {
+          console.error('[AuthCallback] exchangeCodeForSession error:', error)
           navigate('/login', { replace: true })
-        } else {
+        } else if (data.session) {
           navigate('/dashboard', { replace: true })
+        } else {
+          console.error('[AuthCallback] No session returned after code exchange')
+          navigate('/login', { replace: true })
         }
       })
     } else {
-      // No code in URL — check if session already exists
+      console.warn('[AuthCallback] No code in URL')
       supabase.auth.getSession().then(({ data: { session } }) => {
         navigate(session ? '/dashboard' : '/login', { replace: true })
       })
