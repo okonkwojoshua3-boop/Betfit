@@ -16,7 +16,6 @@ export default function InvitePage() {
   const [teamPickId, setTeamPickId] = useState('')
   const [accepting, setAccepting] = useState(false)
 
-  // Fetch bet once user is authenticated
   useEffect(() => {
     if (!user || !token) return
     setFetching(true)
@@ -40,13 +39,14 @@ export default function InvitePage() {
     try {
       await acceptInvite(token, profile.id, profile.username, teamPickId)
       navigate('/dashboard')
-    } catch {
-      setError('Failed to accept the invite. It may have already been accepted.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to join the bet.'
+      setError(msg)
       setAccepting(false)
     }
   }
 
-  // Waiting for auth state to resolve
+  // ── Loading ──────────────────────────────────────────────────────────────────
   if (authLoading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -55,7 +55,7 @@ export default function InvitePage() {
     )
   }
 
-  // Not signed in — prompt to sign in
+  // ── Not signed in ────────────────────────────────────────────────────────────
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
@@ -63,7 +63,7 @@ export default function InvitePage() {
           <div className="text-5xl mb-4">🏆</div>
           <h1 className="text-2xl font-black text-white mb-2">You've been challenged!</h1>
           <p className="text-slate-400 text-sm mb-8">
-            Sign in with Google to see the bet details and accept the challenge.
+            Sign in with Google to see the bet details and pick your team.
           </p>
           <button
             onClick={handleSignIn}
@@ -82,7 +82,6 @@ export default function InvitePage() {
     )
   }
 
-  // Loading bet
   if (fetching) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -91,13 +90,12 @@ export default function InvitePage() {
     )
   }
 
-  // Error or not found
   if (error || !bet) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
         <div className="text-center">
           <div className="text-5xl mb-4">😕</div>
-          <h2 className="text-xl font-bold text-white mb-2">Invite not found</h2>
+          <h2 className="text-xl font-bold text-white mb-2">Oops</h2>
           <p className="text-slate-400 text-sm mb-6">{error ?? 'This link is invalid or has expired.'}</p>
           <button onClick={() => navigate('/dashboard')} className="text-emerald-400 hover:text-emerald-300 text-sm">
             Go to Dashboard
@@ -107,14 +105,14 @@ export default function InvitePage() {
     )
   }
 
-  // Already accepted
-  if (bet.status !== 'pending' || bet.opponentId) {
+  // ── Bet already resolved ─────────────────────────────────────────────────────
+  if (bet.status === 'punishment_pending' || bet.status === 'completed') {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="text-5xl mb-4">✅</div>
-          <h2 className="text-xl font-bold text-white mb-2">Already accepted</h2>
-          <p className="text-slate-400 text-sm mb-6">This bet invite has already been accepted.</p>
+          <div className="text-5xl mb-4">🏁</div>
+          <h2 className="text-xl font-bold text-white mb-2">Bet already resolved</h2>
+          <p className="text-slate-400 text-sm mb-6">This match has finished and the results are in.</p>
           <button onClick={() => navigate('/dashboard')} className="text-emerald-400 hover:text-emerald-300 text-sm">
             Go to Dashboard
           </button>
@@ -123,14 +121,14 @@ export default function InvitePage() {
     )
   }
 
-  // Current user is the creator
+  // ── Current user is the creator ──────────────────────────────────────────────
   if (bet.creatorId === profile?.id) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
         <div className="max-w-sm w-full text-center">
           <div className="text-5xl mb-4">🔗</div>
           <h2 className="text-xl font-bold text-white mb-2">This is your bet</h2>
-          <p className="text-slate-400 text-sm mb-6">Share this link with a friend so they can accept.</p>
+          <p className="text-slate-400 text-sm mb-6">Share this link with your friends so they can join and pick their team.</p>
           <button onClick={() => navigate('/dashboard')} className="text-emerald-400 hover:text-emerald-300 text-sm">
             Go to Dashboard
           </button>
@@ -139,13 +137,29 @@ export default function InvitePage() {
     )
   }
 
+  // ── Already joined ───────────────────────────────────────────────────────────
+  const alreadyJoined = bet.participants?.some((p) => p.userId === profile?.id)
+  if (alreadyJoined) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
+        <div className="text-center">
+          <div className="text-5xl mb-4">✅</div>
+          <h2 className="text-xl font-bold text-white mb-2">You're in!</h2>
+          <p className="text-slate-400 text-sm mb-6">You've already joined this bet. Check the dashboard for updates.</p>
+          <button onClick={() => navigate('/dashboard')} className="text-emerald-400 hover:text-emerald-300 text-sm">
+            Go to Dashboard
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Join form ────────────────────────────────────────────────────────────────
   const punishment = getPunishmentById(bet.punishment.punishmentId)
   const homeTeam = { name: bet.homeTeamName ?? 'Home', emoji: bet.homeTeamEmoji ?? '🏠', id: 'home' }
   const awayTeam = { name: bet.awayTeamName ?? 'Away', emoji: bet.awayTeamEmoji ?? '✈️', id: 'away' }
 
-  // Pick the team id from the match — creator's pick tells us which team is which
-  const creatorPickedHome = bet.creator.teamPickId === 'home' ||
-    (bet.creator.teamPickId !== awayTeam.id && bet.creator.teamPickId !== 'away')
+  const participantCount = bet.participants?.length ?? 0
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4 py-8">
@@ -153,9 +167,12 @@ export default function InvitePage() {
         <div className="text-center mb-8">
           <div className="text-4xl mb-3">🏆</div>
           <h1 className="text-2xl font-black text-white mb-1">
-            <span className="text-emerald-400">{bet.creator.name}</span> challenged you!
+            <span className="text-emerald-400">{bet.creator.name}</span> started a bet!
           </h1>
-          <p className="text-slate-400 text-sm">Pick your team to accept the bet.</p>
+          <p className="text-slate-400 text-sm">Pick your team. Losers do the punishment.</p>
+          {participantCount > 0 && (
+            <p className="text-slate-500 text-xs mt-1">{participantCount} {participantCount === 1 ? 'person' : 'people'} already in</p>
+          )}
         </div>
 
         {/* Bet summary */}
@@ -164,10 +181,12 @@ export default function InvitePage() {
             <span className="text-slate-500">Match</span>
             <span className="text-white font-medium">{homeTeam.emoji} {homeTeam.name} vs {awayTeam.emoji} {awayTeam.name}</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-500">{bet.creator.name} picks</span>
-            <span className="text-white">{creatorPickedHome ? `${homeTeam.emoji} ${homeTeam.name}` : `${awayTeam.emoji} ${awayTeam.name}`}</span>
-          </div>
+          {participantCount > 0 && bet.participants && (
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">In the bet</span>
+              <span className="text-slate-300 text-xs">{bet.participants.map((p) => p.username).join(', ')}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Punishment</span>
             <span className="text-amber-400 font-medium">
@@ -178,7 +197,7 @@ export default function InvitePage() {
         </div>
 
         {/* Team pick */}
-        <p className="text-sm text-slate-400 mb-3">Your pick</p>
+        <p className="text-sm text-slate-400 mb-3 font-medium">Your pick</p>
         <div className="grid grid-cols-2 gap-3 mb-6">
           {[homeTeam, awayTeam].map((team) => (
             <button
@@ -201,13 +220,13 @@ export default function InvitePage() {
           disabled={!teamPickId || accepting}
           className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-xl transition-colors mb-3"
         >
-          {accepting ? 'Accepting…' : '🤝 Accept Bet'}
+          {accepting ? 'Joining…' : '🤝 Join Bet'}
         </button>
         <button
           onClick={() => navigate('/dashboard')}
           className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 font-medium py-3 rounded-xl transition-colors text-sm"
         >
-          Decline
+          Back
         </button>
       </div>
     </div>

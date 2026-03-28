@@ -8,8 +8,7 @@ export default function Navbar() {
   const activeBets = getActiveBets()
   const pendingBets = getPendingBets()
   const dueCount = activeBets.filter((b) => b.status === 'punishment_pending').length
-  const receivedInvites = pendingBets.filter((b) => b.opponentId === profile?.id)
-  const pendingCount = receivedInvites.length + dueCount
+  const pendingCount = pendingBets.length + dueCount
 
   return (
     <nav className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-slate-800/80 shadow-sm">

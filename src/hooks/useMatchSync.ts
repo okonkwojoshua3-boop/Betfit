@@ -4,7 +4,7 @@ import { useAuth } from '../store/AuthContext'
 import { getMatchById } from '../data/matches'
 import { getPunishmentById, formatPunishment } from '../data/punishments'
 import { fetchMatchResult } from '../services/sportsApi'
-import { resolveWinner } from '../lib/betEngine'
+import { resolveLosingTeam } from '../lib/betEngine'
 import { createNotification } from '../services/notificationService'
 
 const CHECKED_KEY = 'betfit_checked_matches'
@@ -57,28 +57,29 @@ export function useMatchSync() {
 
         if (!result) continue
 
-        await resolveBet(bet.id, result)
+        await resolveBet(bet.id, result, match)
 
-        const loserId = resolveWinner(bet, result)
+        const losingTeamId = resolveLosingTeam(match, result)
         const punishment = getPunishmentById(bet.punishment.punishmentId)
         if (!punishment) continue
 
-        const loserName =
-          loserId === 'creator' ? bet.creator.name
-          : loserId === 'opponent' ? bet.opponent.name
-          : null
-
         const punishmentText = formatPunishment(punishment, bet.punishment.reps)
+        const participants = bet.participants ?? []
+        const losers = losingTeamId !== 'draw'
+          ? participants.filter((p) => p.teamPickId === losingTeamId)
+          : []
+        const loserNames = losers.map((p) => p.username).join(', ') || null
 
         const message =
-          loserId === 'draw'
+          losingTeamId === 'draw'
             ? `${match.homeTeam.name} vs ${match.awayTeam.name} ended in a draw — no punishment!`
-            : `${match.homeTeam.name} ${result.homeScore}–${result.awayScore} ${match.awayTeam.name} · ${loserName} lost and must do ${punishmentText}!`
+            : `${match.homeTeam.name} ${result.homeScore}–${result.awayScore} ${match.awayTeam.name} · ${loserNames} lost and must do ${punishmentText}!`
 
-        // Notify both participants
-        const notifyIds = [bet.creatorId, bet.opponentId].filter(Boolean) as string[]
+        // Notify all participants
+        const notifyIds = participants.map((p) => p.userId).filter(Boolean)
+        if (notifyIds.length === 0 && bet.creatorId) notifyIds.push(bet.creatorId)
         for (const uid of notifyIds) {
-          await createNotification(uid, bet.id, message, loserName ?? '', punishmentText)
+          await createNotification(uid, bet.id, message, loserNames ?? '', punishmentText)
         }
       }
     }

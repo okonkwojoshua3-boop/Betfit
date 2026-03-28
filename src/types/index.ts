@@ -70,21 +70,31 @@ export interface Participant {
   teamPickId?: string
 }
 
+export interface BetParticipant {
+  id: string
+  betId: string
+  userId: string
+  username: string
+  teamPickId: string
+  joinedAt: string
+}
+
 export interface Bet {
   id: string
   matchId: string
-  creatorId?: string     // Supabase user ID
-  opponentId?: string    // Supabase user ID
-  creator: Participant
-  opponent: Participant
+  creatorId?: string
+  creator: Participant        // creator display name (kept for UI)
+  opponent: Participant       // kept for backwards compat
   punishment: PunishmentAssignment
   status: BetStatus
   createdAt: string
   resolvedAt?: string
-  loserId?: 'creator' | 'opponent' | 'draw'
+  loserId?: 'creator' | 'opponent' | 'draw'  // legacy 1v1 field
+  losingTeamId?: string      // group bets: team id that lost, or 'draw'
   inviteToken?: string
   homeTeamName?: string
   awayTeamName?: string
   homeTeamEmoji?: string
   awayTeamEmoji?: string
+  participants?: BetParticipant[]
 }

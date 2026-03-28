@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { Bet, MatchResult } from '../types'
-import { resolveWinner } from '../lib/betEngine'
+import type { Bet, Match, MatchResult } from '../types'
+import { resolveLosingTeam } from '../lib/betEngine'
 import { supabase } from '../lib/supabase'
 import {
   fetchBets,
@@ -15,7 +15,6 @@ export function useBetStore(userId: string | undefined) {
   const [bets, setBets] = useState<Bet[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Load bets from Supabase on mount / user change
   useEffect(() => {
     if (!userId) {
       setBets([])
@@ -29,29 +28,14 @@ export function useBetStore(userId: string | undefined) {
       .catch(console.error)
       .finally(() => setLoading(false))
 
-    // Real-time: update local state whenever bets change in DB
+    const refresh = () => fetchBets(userId).then(setBets).catch(console.error)
+
+    // Real-time: listen for changes to bets the user created or participates in
     const channel = supabase
       .channel(`bets:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bets',
-          filter: `creator_id=eq.${userId}`,
-        },
-        () => fetchBets(userId).then(setBets).catch(console.error),
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bets',
-          filter: `opponent_id=eq.${userId}`,
-        },
-        () => fetchBets(userId).then(setBets).catch(console.error),
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bets', filter: `creator_id=eq.${userId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bet_participants', filter: `user_id=eq.${userId}` }, refresh)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bet_participants' }, refresh)
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
@@ -65,9 +49,7 @@ export function useBetStore(userId: string | undefined) {
 
   const acceptBet = useCallback(async (betId: string) => {
     await dbAcceptBet(betId)
-    setBets((prev) =>
-      prev.map((b) => (b.id === betId ? { ...b, status: 'active' } : b)),
-    )
+    setBets((prev) => prev.map((b) => (b.id === betId ? { ...b, status: 'active' } : b)))
   }, [])
 
   const declineBet = useCallback(async (betId: string) => {
@@ -75,30 +57,26 @@ export function useBetStore(userId: string | undefined) {
     setBets((prev) => prev.filter((b) => b.id !== betId))
   }, [])
 
-  const resolveBet = useCallback(async (betId: string, result: MatchResult) => {
-    const bet = bets.find((b) => b.id === betId)
-    if (!bet) return
-    const loserId = resolveWinner(bet, result)
-    await dbResolveBet(betId, result, loserId)
+  const resolveBet = useCallback(async (betId: string, result: MatchResult, match: Match) => {
+    const losingTeamId = resolveLosingTeam(match, result)
+    await dbResolveBet(betId, result, losingTeamId)
     setBets((prev) =>
       prev.map((b) =>
         b.id === betId
           ? {
               ...b,
-              status: loserId === 'draw' ? 'completed' : 'punishment_pending',
-              loserId,
+              status: losingTeamId === 'draw' ? 'completed' : 'punishment_pending',
+              losingTeamId,
               resolvedAt: new Date().toISOString(),
             }
           : b,
       ),
     )
-  }, [bets])
+  }, [])
 
   const acknowledgePunishment = useCallback(async (betId: string) => {
     await dbCompleteBet(betId)
-    setBets((prev) =>
-      prev.map((b) => (b.id === betId ? { ...b, status: 'completed' } : b)),
-    )
+    setBets((prev) => prev.map((b) => (b.id === betId ? { ...b, status: 'completed' } : b)))
   }, [])
 
   const getActiveBets = useCallback(
