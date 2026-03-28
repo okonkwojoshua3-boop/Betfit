@@ -177,13 +177,19 @@ async function fetchLeague(url: string, sport: Sport): Promise<Match[]> {
 }
 
 export async function fetchTodayMatches(): Promise<{ football: Match[]; basketball: Match[] }> {
+  const today = new Date()
+  const dateStr =
+    today.getFullYear().toString() +
+    String(today.getMonth() + 1).padStart(2, '0') +
+    String(today.getDate()).padStart(2, '0')
+
   const [footballResults, basketballMatches] = await Promise.all([
     Promise.all(
       FOOTBALL_LEAGUES.map((league) =>
-        fetchLeague(`${ESPN_BASE}/soccer/${league}/scoreboard`, 'football'),
+        fetchLeague(`${ESPN_BASE}/soccer/${league}/scoreboard?dates=${dateStr}`, 'football'),
       ),
     ),
-    fetchLeague(`${ESPN_BASE}/basketball/nba/scoreboard`, 'basketball'),
+    fetchLeague(`${ESPN_BASE}/basketball/nba/scoreboard?dates=${dateStr}`, 'basketball'),
   ])
 
   // Deduplicate football matches by id (a match may appear in multiple league feeds)
@@ -192,8 +198,15 @@ export async function fetchTodayMatches(): Promise<{ football: Match[]; basketba
     footballMap.set(match.id, match)
   }
 
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+
+  function notPast(m: Match) {
+    return m.status === 'live' || new Date(m.scheduledAt) >= todayStart
+  }
+
   return {
-    football: Array.from(footballMap.values()),
-    basketball: basketballMatches,
+    football: Array.from(footballMap.values()).filter(notPast),
+    basketball: basketballMatches.filter(notPast),
   }
 }

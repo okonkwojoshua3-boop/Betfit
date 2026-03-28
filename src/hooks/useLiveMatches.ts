@@ -3,6 +3,7 @@ import type { Match } from '../types'
 import { fetchTodayMatches } from '../lib/sportsApi'
 
 const SESSION_KEY = 'betfit_today_matches'
+const today = new Date().toISOString().slice(0, 10) // 'YYYY-MM-DD'
 
 export interface LiveMatchesState {
   football: Match[]
@@ -23,9 +24,11 @@ export function useLiveMatches(): LiveMatchesState {
     const cached = sessionStorage.getItem(SESSION_KEY)
     if (cached) {
       try {
-        const parsed = JSON.parse(cached) as { football: Match[]; basketball: Match[] }
-        setState({ ...parsed, loading: false, error: false })
-        return
+        const parsed = JSON.parse(cached) as { date: string; football: Match[]; basketball: Match[] }
+        if (parsed.date === today) {
+          setState({ football: parsed.football, basketball: parsed.basketball, loading: false, error: false })
+          return
+        }
       } catch {
         // ignore bad cache
       }
@@ -33,7 +36,7 @@ export function useLiveMatches(): LiveMatchesState {
 
     fetchTodayMatches()
       .then(({ football, basketball }) => {
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ football, basketball }))
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ date: today, football, basketball }))
         setState({ football, basketball, loading: false, error: false })
       })
       .catch(() => {

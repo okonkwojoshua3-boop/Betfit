@@ -57,8 +57,13 @@ export default function CreateBet() {
     setState((prev) => ({ ...prev, ...patch }))
 
   // Combine live + static, live matches take priority for today
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const fallbackMatches = MATCHES.filter(
+    (m) => m.status === 'live' || new Date(m.scheduledAt) >= todayStart,
+  )
   const allMatches: Match[] = liveMatches.loading || liveMatches.error
-    ? MATCHES
+    ? fallbackMatches
     : [...liveMatches.football, ...liveMatches.basketball]
 
   const selectedMatch: Match | undefined = allMatches.find((m) => m.id === state.selectedMatchId)
