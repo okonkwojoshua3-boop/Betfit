@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import type { Bet, MatchResult } from '../types'
+import { createNotification } from './notificationService'
 
 // ── DB row → frontend Bet ────────────────────────────────────────────────────
 function rowToBet(row: Record<string, unknown>): Bet {
@@ -14,7 +15,7 @@ function rowToBet(row: Record<string, unknown>): Bet {
     },
     opponent: {
       name: row.opponent_name as string,
-      teamPickId: row.opponent_team_pick_id as string,
+      teamPickId: row.opponent_team_pick_id as string | undefined,
     },
     punishment: {
       punishmentId: row.punishment_id as string,
@@ -24,6 +25,11 @@ function rowToBet(row: Record<string, unknown>): Bet {
     loserId: row.loser_id as Bet['loserId'],
     createdAt: row.created_at as string,
     resolvedAt: row.resolved_at as string | undefined,
+    inviteToken: row.invite_token as string | undefined,
+    homeTeamName: row.home_team_name as string | undefined,
+    awayTeamName: row.away_team_name as string | undefined,
+    homeTeamEmoji: row.home_team_emoji as string | undefined,
+    awayTeamEmoji: row.away_team_emoji as string | undefined,
   }
 }
 
@@ -46,18 +52,35 @@ export async function createBet(bet: Omit<Bet, 'id' | 'createdAt'>): Promise<Bet
       creator_id: bet.creatorId,
       opponent_id: bet.opponentId ?? null,
       creator_name: bet.creator.name,
-      opponent_name: bet.opponent.name,
+      opponent_name: bet.opponent.name ?? '',
       creator_team_pick_id: bet.creator.teamPickId,
-      opponent_team_pick_id: bet.opponent.teamPickId,
+      opponent_team_pick_id: bet.opponent.teamPickId ?? null,
       punishment_id: bet.punishment.punishmentId,
       punishment_reps: bet.punishment.reps,
       status: 'pending',
+      home_team_name: bet.homeTeamName ?? null,
+      away_team_name: bet.awayTeamName ?? null,
+      home_team_emoji: bet.homeTeamEmoji ?? null,
+      away_team_emoji: bet.awayTeamEmoji ?? null,
     })
     .select()
     .single()
 
   if (error) throw error
-  return rowToBet(data)
+  const created = rowToBet(data)
+
+  // Notify opponent they received a bet invite
+  if (bet.opponentId) {
+    createNotification(
+      bet.opponentId,
+      created.id,
+      `${bet.creator.name} challenged you to a bet!`,
+      '',
+      '',
+    ).catch(console.error)
+  }
+
+  return created
 }
 
 export async function acceptBet(betId: string): Promise<void> {
@@ -96,4 +119,38 @@ export async function completeBet(betId: string): Promise<void> {
     .eq('id', betId)
 
   if (error) throw error
+}
+
+export async function fetchBetByToken(token: string): Promise<Bet | null> {
+  const { data, error } = await supabase
+    .from('bets')
+    .select('*')
+    .eq('invite_token', token)
+    .maybeSingle()
+
+  if (error || !data) return null
+  return rowToBet(data)
+}
+
+export async function acceptInvite(
+  token: string,
+  opponentId: string,
+  opponentName: string,
+  opponentTeamPickId: string,
+): Promise<Bet> {
+  const { data, error } = await supabase
+    .from('bets')
+    .update({
+      opponent_id: opponentId,
+      opponent_name: opponentName,
+      opponent_team_pick_id: opponentTeamPickId,
+      status: 'active',
+    })
+    .eq('invite_token', token)
+    .eq('status', 'pending')
+    .select()
+    .single()
+
+  if (error) throw error
+  return rowToBet(data)
 }

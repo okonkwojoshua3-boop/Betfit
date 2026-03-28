@@ -49,6 +49,8 @@ export default function CreateBet() {
   const [opponentQuery, setOpponentQuery] = useState('')
   const [opponentResults, setOpponentResults] = useState<Profile[]>([])
   const [selectedOpponent, setSelectedOpponent] = useState<Profile | null>(null)
+  const [inviteLink, setInviteLink] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const liveMatches = useLiveMatches()
 
   const update = (patch: Partial<WizardState>) =>
@@ -68,9 +70,12 @@ export default function CreateBet() {
       : allMatches.filter((m) => m.sport === state.sportFilter)
 
   function canNext(): boolean {
-    if (step === 1) return !!profile && !!selectedOpponent
+    if (step === 1) return !!profile
     if (step === 2) return state.selectedMatchId !== ''
-    if (step === 3) return state.creatorPickId !== '' && state.opponentPickId !== ''
+    if (step === 3) {
+      if (selectedOpponent) return state.creatorPickId !== '' && state.opponentPickId !== ''
+      return state.creatorPickId !== ''
+    }
     if (step === 4) return state.punishmentId !== '' && state.punishmentReps > 0
     return false
   }
@@ -94,22 +99,66 @@ export default function CreateBet() {
 
   async function handleCreate() {
     if (selectedMatch) saveMatch(selectedMatch)
-    await addBet({
+    const created = await addBet({
       matchId: state.selectedMatchId,
       creatorId: profile?.id,
       opponentId: selectedOpponent?.id,
       creator: { name: state.creatorName.trim(), teamPickId: state.creatorPickId },
-      opponent: { name: state.opponentName.trim(), teamPickId: state.opponentPickId },
+      opponent: { name: state.opponentName.trim(), teamPickId: state.opponentPickId || undefined },
       punishment: { punishmentId: state.punishmentId, reps: state.punishmentReps },
       status: 'pending',
+      homeTeamName: selectedMatch?.homeTeam.name,
+      awayTeamName: selectedMatch?.awayTeam.name,
+      homeTeamEmoji: selectedMatch?.homeTeam.emoji,
+      awayTeamEmoji: selectedMatch?.awayTeam.emoji,
     })
-    navigate('/dashboard')
+    if (!selectedOpponent && created.inviteToken) {
+      setInviteLink(`${window.location.origin}/invite/${created.inviteToken}`)
+    } else {
+      navigate('/dashboard')
+    }
+  }
+
+  function handleCopyLink() {
+    if (!inviteLink) return
+    navigator.clipboard.writeText(inviteLink)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   const STEPS = ['Players', 'Match', 'Picks', 'Punishment']
 
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
+      {/* Share screen — shown after creating a link-invite bet */}
+      {inviteLink && (
+        <div className="text-center">
+          <div className="text-5xl mb-4">🔗</div>
+          <h2 className="text-2xl font-black text-white mb-2">Bet Created!</h2>
+          <p className="text-slate-400 text-sm mb-8">
+            Share this link with your friend. They'll sign in and pick their team to accept the challenge.
+          </p>
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4 text-left">
+            <p className="text-xs text-slate-500 mb-2 uppercase tracking-wide">Invite link</p>
+            <p className="text-slate-200 text-sm break-all font-mono">{inviteLink}</p>
+          </div>
+          <button
+            onClick={handleCopyLink}
+            className="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-3 rounded-xl transition-colors mb-3"
+          >
+            {copied ? '✓ Copied!' : 'Copy Link'}
+          </button>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold py-3 rounded-xl transition-colors"
+          >
+            Go to Dashboard
+          </button>
+        </div>
+      )}
+
+      {!inviteLink && (
+        <>
       <button
         onClick={() => navigate(-1)}
         className="text-slate-400 hover:text-white text-sm mb-6 flex items-center gap-1"
@@ -167,9 +216,12 @@ export default function CreateBet() {
             </div>
           </div>
 
-          {/* Opponent — search by username */}
+          {/* Opponent — search by username (optional) */}
           <div>
-            <label className="text-sm text-slate-400 mb-2 block">Opponent</label>
+            <label className="text-sm text-slate-400 mb-2 block">
+              Opponent
+              <span className="ml-2 text-slate-600 font-normal">optional — or share a link after</span>
+            </label>
             <input
               type="text"
               value={opponentQuery}
@@ -356,7 +408,7 @@ export default function CreateBet() {
 
           {[
             { label: state.creatorName, key: 'creatorPickId' as const },
-            { label: state.opponentName, key: 'opponentPickId' as const },
+            ...(selectedOpponent ? [{ label: state.opponentName, key: 'opponentPickId' as const }] : []),
           ].map(({ label, key }) => (
             <div key={key}>
               <label className="text-sm text-slate-400 mb-2 block">{label} picks...</label>
@@ -496,6 +548,8 @@ export default function CreateBet() {
           </button>
         )}
       </div>
+        </>
+      )}
     </div>
   )
 }

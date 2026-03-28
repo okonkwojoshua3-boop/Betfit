@@ -11,6 +11,7 @@ import History from './pages/History'
 import Leaderboard from './pages/Leaderboard'
 import LoginPage from './pages/auth/LoginPage'
 import AuthCallback from './pages/auth/AuthCallback'
+import InvitePage from './pages/InvitePage'
 import NotificationBanner from './components/ui/NotificationBanner'
 import { useMatchSync } from './hooks/useMatchSync'
 
@@ -79,6 +80,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/invite/:token" element={<InvitePage />} />
           <Route path="/*" element={<AuthGuard />} />
         </Routes>
       </BrowserRouter>

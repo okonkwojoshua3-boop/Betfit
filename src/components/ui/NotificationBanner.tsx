@@ -14,7 +14,7 @@ export default function NotificationBanner() {
           <div className="flex items-center gap-2">
             <span className="text-base">🔔</span>
             <span className="text-amber-400 font-bold text-sm">
-              {unread.length} bet result{unread.length > 1 ? 's' : ''} updated
+              {unread.length} new notification{unread.length > 1 ? 's' : ''}
             </span>
           </div>
           <button

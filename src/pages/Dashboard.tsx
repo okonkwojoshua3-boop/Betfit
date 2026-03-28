@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useBets } from '../store/BetContext'
+import { useAuth } from '../store/AuthContext'
 import BetCard from '../components/bets/BetCard'
 import { getMatchById } from '../data/matches'
 import { getPunishmentById } from '../data/punishments'
@@ -8,8 +9,11 @@ import SportIcon from '../components/ui/SportIcon'
 export default function Dashboard() {
   const navigate = useNavigate()
   const { getActiveBets, getPendingBets, acceptBet, declineBet, bets } = useBets()
+  const { profile } = useAuth()
   const activeBets = getActiveBets()
   const pendingBets = getPendingBets()
+  const receivedInvites = pendingBets.filter((b) => b.opponentId === profile?.id)
+  const sentInvites = pendingBets.filter((b) => b.creatorId === profile?.id)
   const dueCount = activeBets.filter((b) => b.status === 'punishment_pending').length
   const totalCompleted = bets.filter((b) => b.status === 'completed').length
 
@@ -41,17 +45,17 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Pending bets — awaiting acceptance */}
-      {pendingBets.length > 0 && (
+      {/* Received invites — awaiting my acceptance */}
+      {receivedInvites.length > 0 && (
         <div className="mb-8">
           <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-            Pending
+            Invites
             <span className="bg-amber-500 text-black text-xs font-bold rounded-full w-5 h-5 inline-flex items-center justify-center">
-              {pendingBets.length}
+              {receivedInvites.length}
             </span>
           </h2>
           <div className="space-y-3">
-            {pendingBets.map((bet) => {
+            {receivedInvites.map((bet) => {
               const match = getMatchById(bet.matchId)
               const punishment = getPunishmentById(bet.punishment.punishmentId)
               if (!match || !punishment) return null
@@ -69,12 +73,12 @@ export default function Dashboard() {
                         </span>
                       </div>
                       <p className="text-xs text-slate-400">
-                        {bet.creator.name} challenged {bet.opponent.name} ·{' '}
+                        <span className="text-white font-medium">{bet.creator.name}</span> challenged you ·{' '}
                         <span className="text-amber-400">{bet.punishment.reps} {punishment.name}</span>
                       </p>
                     </div>
                     <span className="text-xs text-amber-400 font-semibold bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-lg shrink-0">
-                      Pending
+                      Invited
                     </span>
                   </div>
                   <div className="flex gap-2">
@@ -90,6 +94,49 @@ export default function Dashboard() {
                     >
                       Decline
                     </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Sent invites — waiting for opponent */}
+      {sentInvites.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+            Awaiting Response
+            <span className="bg-slate-600 text-slate-300 text-xs font-bold rounded-full w-5 h-5 inline-flex items-center justify-center">
+              {sentInvites.length}
+            </span>
+          </h2>
+          <div className="space-y-3">
+            {sentInvites.map((bet) => {
+              const match = getMatchById(bet.matchId)
+              const punishment = getPunishmentById(bet.punishment.punishmentId)
+              if (!match || !punishment) return null
+              return (
+                <div
+                  key={bet.id}
+                  className="bg-slate-800 border border-slate-700 rounded-xl p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <SportIcon sport={match.sport} size="sm" />
+                        <span className="text-white font-semibold text-sm">
+                          {match.homeTeam.name} vs {match.awayTeam.name}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        Waiting for <span className="text-white font-medium">{bet.opponent.name}</span> ·{' '}
+                        <span className="text-amber-400">{bet.punishment.reps} {punishment.name}</span>
+                      </p>
+                    </div>
+                    <span className="text-xs text-slate-400 font-semibold bg-slate-700/60 border border-slate-600 px-2 py-1 rounded-lg shrink-0">
+                      Sent
+                    </span>
                   </div>
                 </div>
               )

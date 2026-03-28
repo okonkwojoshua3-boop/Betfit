@@ -67,7 +67,7 @@ export interface AppNotification {
 
 export interface Participant {
   name: string
-  teamPickId: string
+  teamPickId?: string
 }
 
 export interface Bet {
@@ -82,4 +82,9 @@ export interface Bet {
   createdAt: string
   resolvedAt?: string
   loserId?: 'creator' | 'opponent' | 'draw'
+  inviteToken?: string
+  homeTeamName?: string
+  awayTeamName?: string
+  homeTeamEmoji?: string
+  awayTeamEmoji?: string
 }

@@ -29,7 +29,9 @@ export default function AuthCallback() {
         if (error) {
           setError(error.message)
         } else if (data.session) {
-          navigate('/dashboard', { replace: true })
+          const redirect = sessionStorage.getItem('post_auth_redirect')
+          sessionStorage.removeItem('post_auth_redirect')
+          navigate(redirect || '/dashboard', { replace: true })
         }
       })
       return
@@ -49,7 +51,9 @@ export default function AuthCallback() {
             if (error) {
               setError(error.message)
             } else if (data.session) {
-              navigate('/dashboard', { replace: true })
+              const redirect = sessionStorage.getItem('post_auth_redirect')
+              sessionStorage.removeItem('post_auth_redirect')
+              navigate(redirect || '/dashboard', { replace: true })
             }
           })
       }
@@ -60,7 +64,9 @@ export default function AuthCallback() {
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       console.log('[AuthCallback] getSession result:', { session, error })
       if (session) {
-        navigate('/dashboard', { replace: true })
+        const redirect = sessionStorage.getItem('post_auth_redirect')
+        sessionStorage.removeItem('post_auth_redirect')
+        navigate(redirect || '/dashboard', { replace: true })
       } else {
         setError('Sign in failed. Please try again.')
       }
