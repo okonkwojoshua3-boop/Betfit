@@ -3,12 +3,27 @@ import type { Match, Sport, MatchStatus } from '../types'
 const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports'
 
 const FOOTBALL_LEAGUES = [
+  // Top 5 European Leagues
   'eng.1',          // Premier League
   'esp.1',          // La Liga
   'ger.1',          // Bundesliga
   'ita.1',          // Serie A
   'fra.1',          // Ligue 1
+  // Other top club leagues
+  'ned.1',          // Eredivisie
+  'por.1',          // Primeira Liga
+  'tur.1',          // Super Lig
+  'eng.2',          // Championship
+  // UEFA Club Competitions
   'uefa.champions_league',
+  'uefa.europa',
+  'uefa.europa.conf',
+  // International / National Teams
+  'fifa.friendly',  // International friendlies
+  'UEFA.Nations',   // UEFA Nations League
+  'UEFA.EURO',      // UEFA Euros
+  'fifa.world',     // FIFA World Cup
+  'conmebol.america', // Copa America
 ]
 
 const TEAM_META: Record<string, { emoji: string; badgeColor: string }> = {
