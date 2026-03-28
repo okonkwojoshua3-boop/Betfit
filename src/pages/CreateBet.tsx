@@ -62,9 +62,10 @@ export default function CreateBet() {
   const fallbackMatches = MATCHES.filter(
     (m) => m.status === 'live' || new Date(m.scheduledAt) >= todayStart,
   )
-  const allMatches: Match[] = liveMatches.loading || liveMatches.error
+  const liveList = [...liveMatches.football, ...liveMatches.basketball]
+  const allMatches: Match[] = liveMatches.loading || liveMatches.error || liveList.length === 0
     ? fallbackMatches
-    : [...liveMatches.football, ...liveMatches.basketball]
+    : liveList
 
   const selectedMatch: Match | undefined = allMatches.find((m) => m.id === state.selectedMatchId)
   const selectedPunishment = PUNISHMENTS.find((p) => p.id === state.punishmentId)
