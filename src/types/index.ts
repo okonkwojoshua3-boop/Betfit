@@ -96,5 +96,7 @@ export interface Bet {
   awayTeamName?: string
   homeTeamEmoji?: string
   awayTeamEmoji?: string
+  homeScore?: number
+  awayScore?: number
   participants?: BetParticipant[]
 }

@@ -30,6 +30,8 @@ function rowToBet(row: Record<string, unknown>): Bet {
     awayTeamName: row.away_team_name as string | undefined,
     homeTeamEmoji: row.home_team_emoji as string | undefined,
     awayTeamEmoji: row.away_team_emoji as string | undefined,
+    homeScore: row.home_score != null ? Number(row.home_score) : undefined,
+    awayScore: row.away_score != null ? Number(row.away_score) : undefined,
   }
 }
 

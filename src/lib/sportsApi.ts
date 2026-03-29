@@ -191,6 +191,83 @@ async function fetchLeague(url: string, sport: Sport): Promise<Match[]> {
   }
 }
 
+// ── Live score for a single match ─────────────────────────────────────────────
+
+export interface LiveMatchData {
+  homeScore: number | null
+  awayScore: number | null
+  isLive: boolean
+  isFinished: boolean
+  statusText: string
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseEventLive(event: any): LiveMatchData {
+  const competition = event.competitions?.[0]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const home = competition?.competitors?.find((c: any) => c.homeAway === 'home')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const away = competition?.competitors?.find((c: any) => c.homeAway === 'away')
+  const statusName: string = event.status?.type?.name ?? ''
+  const isLive = statusName === 'STATUS_IN_PROGRESS'
+  const isFinished = statusName === 'STATUS_FINAL'
+  const clock: string = event.status?.displayClock ?? ''
+  const period: number = event.status?.period ?? 0
+
+  let statusText = 'Scheduled'
+  if (isLive && clock) {
+    statusText = period >= 2 ? `2H ${clock}` : `${clock}'`
+  } else if (isLive) {
+    statusText = 'LIVE'
+  } else if (isFinished) {
+    statusText = 'FT'
+  }
+
+  return {
+    homeScore: home?.score != null ? Number(home.score) : null,
+    awayScore: away?.score != null ? Number(away.score) : null,
+    isLive,
+    isFinished,
+    statusText,
+  }
+}
+
+export async function fetchMatchLiveData(match: Match): Promise<LiveMatchData | null> {
+  if (!match.id.startsWith('espn-')) return null
+  const eventId = match.id.slice(5)
+  const dateStr = match.scheduledAt.slice(0, 10).replace(/-/g, '')
+
+  if (match.sport === 'basketball') {
+    try {
+      const res = await fetch(`${ESPN_BASE}/basketball/nba/scoreboard?dates=${dateStr}`)
+      if (!res.ok) return null
+      const data = await res.json()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const event = (data.events ?? []).find((e: any) => e.id === eventId)
+      return event ? parseEventLive(event) : null
+    } catch {
+      return null
+    }
+  }
+
+  // Football: scan all leagues in parallel
+  const results = await Promise.all(
+    FOOTBALL_LEAGUES.map(async (league) => {
+      try {
+        const res = await fetch(`${ESPN_BASE}/soccer/${league}/scoreboard?dates=${dateStr}`)
+        if (!res.ok) return null
+        const data = await res.json()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (data.events ?? []).find((e: any) => e.id === eventId) ?? null
+      } catch {
+        return null
+      }
+    }),
+  )
+  const event = results.find(Boolean)
+  return event ? parseEventLive(event) : null
+}
+
 export async function fetchTodayMatches(): Promise<{ football: Match[]; basketball: Match[] }> {
   const today = new Date()
   const dateStr =

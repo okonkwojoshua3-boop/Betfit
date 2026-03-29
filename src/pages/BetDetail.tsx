@@ -5,13 +5,26 @@ import { useAuth } from '../store/AuthContext'
 import { getMatchById } from '../data/matches'
 import { getPunishmentById, formatPunishment } from '../data/punishments'
 import { useProof } from '../hooks/useProof'
+import { useLiveScore } from '../hooks/useLiveScore'
 import PunishmentBanner from '../components/bets/PunishmentBanner'
 import Badge from '../components/ui/Badge'
 import SportIcon from '../components/ui/SportIcon'
 import type { Match } from '../types'
+import type { LiveMatchData } from '../lib/sportsApi'
 
 // ── Match status helper ───────────────────────────────────────────────────────
-function MatchStatusBadge({ match }: { match: Match }) {
+function MatchStatusBadge({ match, liveData }: { match: Match; liveData: LiveMatchData | null }) {
+  if (liveData?.isLive) {
+    return (
+      <span className="flex items-center gap-1 text-xs font-bold text-red-400">
+        <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />
+        {liveData.statusText}
+      </span>
+    )
+  }
+  if (liveData?.isFinished || match.result || match.status === 'finished') {
+    return <span className="text-xs font-bold text-slate-400 bg-slate-700 px-2 py-0.5 rounded">FT</span>
+  }
   if (match.status === 'live') {
     return (
       <span className="flex items-center gap-1 text-xs font-bold text-red-400">
@@ -19,9 +32,6 @@ function MatchStatusBadge({ match }: { match: Match }) {
         LIVE
       </span>
     )
-  }
-  if (match.result || match.status === 'finished') {
-    return <span className="text-xs font-bold text-slate-400 bg-slate-700 px-2 py-0.5 rounded">FT</span>
   }
   const kickoff = new Date(match.scheduledAt)
   const now = new Date()
@@ -188,10 +198,11 @@ export default function BetDetail() {
   const match = bet ? getMatchById(bet.matchId) : undefined
   const punishment = bet ? getPunishmentById(bet.punishment.punishmentId) : undefined
 
-  const [showModal, setShowModal] = useState(false)
-  const [homeScore, setHomeScore] = useState('')
-  const [awayScore, setAwayScore] = useState('')
-  const [winnerOverride, setWinnerOverride] = useState<string>('score')
+  const betResolved = bet?.status === 'punishment_pending' || bet?.status === 'completed'
+  const liveData = useLiveScore(match, betResolved, (result) => {
+    if (id && match) resolveBet(id, result, match)
+  })
+
   const [showBanner, setShowBanner] = useState(true)
 
   if (!bet || !match || !punishment) {
@@ -222,24 +233,9 @@ export default function BetDetail() {
   const punishmentText = formatPunishment(punishment, bet.punishment.reps)
   const loserNames = losers.map((p) => p.username).join(', ')
 
-  function handleResolve() {
-    if (!id) return
-    const home = parseInt(homeScore)
-    const away = parseInt(awayScore)
-    if (isNaN(home) || isNaN(away)) return
-
-    let winnerId: string
-    if (winnerOverride === 'draw') {
-      winnerId = 'draw'
-    } else if (winnerOverride === 'score') {
-      winnerId = home > away ? match!.homeTeam.id : away > home ? match!.awayTeam.id : 'draw'
-    } else {
-      winnerId = winnerOverride
-    }
-
-    resolveBet(id, { winnerId, homeScore: home, awayScore: away }, match!)
-    setShowModal(false)
-  }
+  // Resolved score: live data takes priority, then stored bet scores
+  const displayHomeScore = liveData?.homeScore ?? bet.homeScore ?? null
+  const displayAwayScore = liveData?.awayScore ?? bet.awayScore ?? null
 
   // Show punishment banner on first visit when resolved
   if (bet.status === 'punishment_pending' && losingTeamId && !isDraw && showBanner) {
@@ -260,7 +256,7 @@ export default function BetDetail() {
             <span className="text-slate-400 text-sm capitalize">{match.sport}</span>
           </div>
           <div className="flex items-center gap-2">
-            <MatchStatusBadge match={match} />
+            <MatchStatusBadge match={match} liveData={liveData} />
             <Badge status={bet.status} />
           </div>
         </div>
@@ -273,8 +269,10 @@ export default function BetDetail() {
             <div className="text-xs text-slate-500">{match.homeTeam.shortCode}</div>
           </div>
           <div className="text-center px-4">
-            {match.result ? (
-              <div className="text-3xl font-black text-white">{match.result.homeScore} – {match.result.awayScore}</div>
+            {displayHomeScore != null && displayAwayScore != null ? (
+              <div className={`text-3xl font-black ${liveData?.isLive ? 'text-red-400' : 'text-white'}`}>
+                {displayHomeScore} – {displayAwayScore}
+              </div>
             ) : (
               <div className="text-slate-500 font-bold text-lg">VS</div>
             )}
@@ -364,14 +362,11 @@ export default function BetDetail() {
         </div>
       )}
 
-      {/* Enter result */}
-      {bet.status === 'active' && (
-        <button
-          onClick={() => setShowModal(true)}
-          className="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-4 rounded-xl transition-colors"
-        >
-          Enter Match Result
-        </button>
+      {/* Waiting for result */}
+      {bet.status === 'active' && !liveData?.isLive && !liveData?.isFinished && (
+        <div className="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-center text-sm text-slate-500">
+          Scores update automatically every 45s once the match starts
+        </div>
       )}
 
       {/* Completed */}
@@ -389,72 +384,6 @@ export default function BetDetail() {
         </div>
       )}
 
-      {/* Result modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6">
-            <h3 className="text-lg font-bold text-white mb-4">Enter Final Score</h3>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="flex-1 text-center">
-                <div className="text-sm text-slate-400 mb-1.5">{match.homeTeam.name}</div>
-                <input
-                  type="number"
-                  min={0}
-                  value={homeScore}
-                  onChange={(e) => setHomeScore(e.target.value)}
-                  placeholder="0"
-                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2.5 text-white text-center text-xl font-bold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                />
-              </div>
-              <span className="text-slate-500 font-bold pt-5">–</span>
-              <div className="flex-1 text-center">
-                <div className="text-sm text-slate-400 mb-1.5">{match.awayTeam.name}</div>
-                <input
-                  type="number"
-                  min={0}
-                  value={awayScore}
-                  onChange={(e) => setAwayScore(e.target.value)}
-                  placeholder="0"
-                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2.5 text-white text-center text-xl font-bold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                />
-              </div>
-            </div>
-            <div className="mb-5">
-              <label className="text-xs text-slate-400 mb-2 block">Winner override</label>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { value: 'score', label: 'From Score' },
-                  { value: match.homeTeam.id, label: match.homeTeam.shortCode },
-                  { value: match.awayTeam.id, label: match.awayTeam.shortCode },
-                  { value: 'draw', label: 'Draw' },
-                ].map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setWinnerOverride(opt.value)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      winnerOverride === opt.value ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => setShowModal(false)} className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-xl transition-colors">
-                Cancel
-              </button>
-              <button
-                onClick={handleResolve}
-                disabled={homeScore === '' || awayScore === ''}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-xl transition-colors"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
