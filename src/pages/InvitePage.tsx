@@ -236,7 +236,7 @@ export default function InvitePage() {
         {/* Teams VS */}
         <div className="flex items-center justify-center gap-4">
           <div className="text-center flex-1">
-            <TeamLogo name={homeTeam.name} logo={homeTeam.logo} emoji={homeTeam.emoji} size="xl" className="mb-2" />
+            <TeamLogo name={homeTeam.name} logo={homeTeam.logo} teamId={homeTeam.id} sport={bet.sport} emoji={homeTeam.emoji} size="xl" className="mb-2" />
             <div className="font-bold text-white">{homeTeam.name}</div>
             {creatorPickedHomeTeam && (
               <div className="text-xs text-emerald-400 mt-1">{bet.creator.name}'s pick</div>
@@ -244,7 +244,7 @@ export default function InvitePage() {
           </div>
           <div className="text-slate-500 font-bold text-lg px-2">VS</div>
           <div className="text-center flex-1">
-            <TeamLogo name={awayTeam.name} logo={awayTeam.logo} emoji={awayTeam.emoji} size="xl" className="mb-2" />
+            <TeamLogo name={awayTeam.name} logo={awayTeam.logo} teamId={awayTeam.id} sport={bet.sport} emoji={awayTeam.emoji} size="xl" className="mb-2" />
             <div className="font-bold text-white">{awayTeam.name}</div>
             {!creatorPickedHomeTeam && (
               <div className="text-xs text-emerald-400 mt-1">{bet.creator.name}'s pick</div>
@@ -278,7 +278,7 @@ export default function InvitePage() {
           <div
             className="flex flex-col items-center gap-2 p-5 rounded-2xl border border-emerald-500 bg-emerald-500/10 mb-6"
           >
-            <TeamLogo name={creatorPickedHomeTeam ? awayTeam.name : homeTeam.name} logo={creatorPickedHomeTeam ? awayTeam.logo : homeTeam.logo} emoji={creatorPickedHomeTeam ? awayTeam.emoji : homeTeam.emoji} size="lg" />
+            <TeamLogo name={creatorPickedHomeTeam ? awayTeam.name : homeTeam.name} logo={creatorPickedHomeTeam ? awayTeam.logo : homeTeam.logo} teamId={creatorPickedHomeTeam ? awayTeam.id : homeTeam.id} sport={bet.sport} emoji={creatorPickedHomeTeam ? awayTeam.emoji : homeTeam.emoji} size="lg" />
             <span className="font-bold text-white text-lg">{creatorPickedHomeTeam ? awayTeam.name : homeTeam.name}</span>
             <span className="text-xs text-emerald-400">Your side — assigned automatically</span>
           </div>
@@ -297,7 +297,7 @@ export default function InvitePage() {
                     : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-500 hover:bg-slate-700/50'
                 }`}
               >
-                <TeamLogo name={team.name} logo={team.logo} emoji={team.emoji} size="lg" />
+                <TeamLogo name={team.name} logo={team.logo} teamId={team.id} sport={bet.sport} emoji={team.emoji} size="lg" />
                 <span className="font-semibold text-sm text-center text-white">{team.name}</span>
                 {teamPickId === team.id && <span className="text-xs text-emerald-400">Selected ✓</span>}
               </button>

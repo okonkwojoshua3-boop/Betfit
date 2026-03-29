@@ -424,7 +424,7 @@ export default function CreateBet() {
                     : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-500'
                 }`}
               >
-                <TeamLogo name={team.name} logo={team.logo} emoji={team.emoji} size="md" />
+                <TeamLogo name={team.name} logo={team.logo} teamId={team.id} sport={selectedMatch.sport} emoji={team.emoji} size="md" />
                 <span className="font-semibold text-sm text-center">{team.name}</span>
                 <span className="text-xs text-slate-500">{team.shortCode}</span>
               </button>

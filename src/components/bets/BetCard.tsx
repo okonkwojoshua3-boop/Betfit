@@ -21,6 +21,7 @@ export default function BetCard({ bet }: { bet: Bet }) {
   const homeTeamLogo = storedMatch?.homeTeam.logo ?? bet.homeTeamLogo
   const awayTeamLogo = storedMatch?.awayTeam.logo ?? bet.awayTeamLogo
   const homeTeamId = storedMatch?.homeTeam.id ?? bet.homeTeamId ?? 'home'
+  const awayTeamId = storedMatch?.awayTeam.id ?? bet.awayTeamId ?? 'away'
   const scheduledAt = storedMatch?.scheduledAt ?? bet.matchScheduledAt ?? ''
   const homeScore = bet.homeScore ?? storedMatch?.result?.homeScore
   const awayScore = bet.awayScore ?? storedMatch?.result?.awayScore
@@ -88,7 +89,7 @@ export default function BetCard({ bet }: { bet: Bet }) {
         {/* Match — broadcast style */}
         <div className="flex items-center justify-between mb-4 px-1">
           <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-            <TeamLogo name={homeTeamName} logo={homeTeamLogo} emoji={homeTeamEmoji} size="md" />
+            <TeamLogo name={homeTeamName} logo={homeTeamLogo} teamId={homeTeamId} sport={sport} emoji={homeTeamEmoji} size="md" />
             <span className="text-xs font-semibold text-white text-center truncate w-full max-w-[80px] mx-auto leading-tight">
               {homeTeamName}
             </span>
@@ -105,7 +106,7 @@ export default function BetCard({ bet }: { bet: Bet }) {
           </div>
 
           <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-            <TeamLogo name={awayTeamName} logo={awayTeamLogo} emoji={awayTeamEmoji} size="md" />
+            <TeamLogo name={awayTeamName} logo={awayTeamLogo} teamId={awayTeamId} sport={sport} emoji={awayTeamEmoji} size="md" />
             <span className="text-xs font-semibold text-white text-center truncate w-full max-w-[80px] mx-auto leading-tight">
               {awayTeamName}
             </span>
