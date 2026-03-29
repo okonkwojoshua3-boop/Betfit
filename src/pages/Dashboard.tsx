@@ -167,7 +167,7 @@ export default function Dashboard() {
                   )}
                   {alreadyJoined && (
                     <button
-                      onClick={() => navigate(`/bet/${bet.id}`)}
+                      onClick={() => navigate(`/bets/${bet.id}`)}
                       className="w-full bg-slate-700 hover:bg-slate-600 text-white text-sm font-semibold py-2 rounded-lg transition-colors border border-slate-600"
                     >
                       View Bet
