@@ -17,6 +17,8 @@ export default function Dashboard() {
   const pendingBets = getPendingBets()
   // Pending bets the current user created — waiting for friends to join
   const myPendingBets = pendingBets.filter((b) => b.creatorId === profile?.id)
+  // Pending bets the user was invited to / has joined — but didn't create
+  const receivedPendingBets = pendingBets.filter((b) => b.creatorId !== profile?.id)
   const dueCount = activeBets.filter((b) => b.status === 'punishment_pending').length
   const totalCompleted = bets.filter((b) => b.status === 'completed').length
 
@@ -105,6 +107,72 @@ export default function Dashboard() {
                       Cancel
                     </button>
                   </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Received invites / joined-but-pending */}
+      {receivedPendingBets.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+            Invited to Bet
+            <span className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 inline-flex items-center justify-center shadow-sm shadow-red-500/30">
+              {receivedPendingBets.length}
+            </span>
+          </h2>
+          <div className="space-y-3">
+            {receivedPendingBets.map((bet) => {
+              const match = getMatchById(bet.matchId)
+              const punishment = getPunishmentById(bet.punishment.punishmentId)
+              const homeTeamName = bet.homeTeamName ?? match?.homeTeam.name ?? 'Home'
+              const awayTeamName = bet.awayTeamName ?? match?.awayTeam.name ?? 'Away'
+              const homeTeamEmoji = bet.homeTeamEmoji ?? match?.homeTeam.emoji ?? '⚽'
+              const awayTeamEmoji = bet.awayTeamEmoji ?? match?.awayTeam.emoji ?? '⚽'
+              const alreadyJoined = bet.participants?.some((p) => p.userId === profile?.id)
+              return (
+                <div key={bet.id} className="bg-slate-800 border border-amber-500/30 border-t-2 border-t-amber-500 rounded-xl p-4">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <SportIcon sport={match?.sport ?? 'football'} size="sm" />
+                        <span className="text-white font-semibold text-sm">
+                          {homeTeamEmoji} {homeTeamName} vs {awayTeamEmoji} {awayTeamName}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        from <span className="text-white font-medium">{bet.creator.name}</span>
+                        {punishment && (
+                          <> · <span className="text-amber-400">{bet.punishment.reps} {punishment.name}</span></>
+                        )}
+                      </p>
+                    </div>
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-lg shrink-0 ${
+                      alreadyJoined
+                        ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                        : 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
+                    }`}>
+                      {alreadyJoined ? 'Joined' : 'Invited'}
+                    </span>
+                  </div>
+                  {!alreadyJoined && bet.inviteToken && (
+                    <button
+                      onClick={() => navigate(`/invite/${bet.inviteToken}`)}
+                      className="w-full bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold py-2 rounded-lg transition-colors"
+                    >
+                      View & Accept Bet
+                    </button>
+                  )}
+                  {alreadyJoined && (
+                    <button
+                      onClick={() => navigate(`/bet/${bet.id}`)}
+                      className="w-full bg-slate-700 hover:bg-slate-600 text-white text-sm font-semibold py-2 rounded-lg transition-colors border border-slate-600"
+                    >
+                      View Bet
+                    </button>
+                  )}
                 </div>
               )
             })}
