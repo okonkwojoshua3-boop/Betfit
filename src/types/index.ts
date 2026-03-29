@@ -92,10 +92,13 @@ export interface Bet {
   loserId?: 'creator' | 'opponent' | 'draw'  // legacy 1v1 field
   losingTeamId?: string      // group bets: team id that lost, or 'draw'
   inviteToken?: string
+  opponentId?: string       // set for 1v1 bets — only this user can join
   homeTeamName?: string
   awayTeamName?: string
   homeTeamEmoji?: string
   awayTeamEmoji?: string
+  homeTeamId?: string       // real ESPN team ID for home team
+  awayTeamId?: string       // real ESPN team ID for away team
   homeScore?: number
   awayScore?: number
   participants?: BetParticipant[]

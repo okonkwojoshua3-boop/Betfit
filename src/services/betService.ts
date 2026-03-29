@@ -26,10 +26,13 @@ function rowToBet(row: Record<string, unknown>): Bet {
     createdAt: row.created_at as string,
     resolvedAt: row.resolved_at as string | undefined,
     inviteToken: row.invite_token as string | undefined,
+    opponentId: row.opponent_id as string | undefined,
     homeTeamName: row.home_team_name as string | undefined,
     awayTeamName: row.away_team_name as string | undefined,
     homeTeamEmoji: row.home_team_emoji as string | undefined,
     awayTeamEmoji: row.away_team_emoji as string | undefined,
+    homeTeamId: row.home_team_id as string | undefined,
+    awayTeamId: row.away_team_id as string | undefined,
     homeScore: row.home_score != null ? Number(row.home_score) : undefined,
     awayScore: row.away_score != null ? Number(row.away_score) : undefined,
   }
@@ -92,10 +95,13 @@ export async function createBet(bet: Omit<Bet, 'id' | 'createdAt'>): Promise<Bet
       punishment_id: bet.punishment.punishmentId,
       punishment_reps: bet.punishment.reps,
       status: 'pending',
+      opponent_id: bet.opponentId ?? null,
       home_team_name: bet.homeTeamName ?? null,
       away_team_name: bet.awayTeamName ?? null,
       home_team_emoji: bet.homeTeamEmoji ?? null,
       away_team_emoji: bet.awayTeamEmoji ?? null,
+      home_team_id: bet.homeTeamId ?? null,
+      away_team_id: bet.awayTeamId ?? null,
     })
     .select()
     .single()

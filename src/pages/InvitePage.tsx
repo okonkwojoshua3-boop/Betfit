@@ -28,6 +28,15 @@ export default function InvitePage() {
       .finally(() => setFetching(false))
   }, [user, token])
 
+  // For 1v1 bets: auto-select the opposite team once bet is loaded
+  useEffect(() => {
+    if (!bet?.opponentId) return
+    const homeId = bet.homeTeamId ?? 'home'
+    const awayId = bet.awayTeamId ?? 'away'
+    const creatorPickedHome = bet.creator.teamPickId === homeId
+    setTeamPickId(creatorPickedHome ? awayId : homeId)
+  }, [bet])
+
   function handleSignIn() {
     sessionStorage.setItem('post_auth_redirect', window.location.pathname)
     signInWithGoogle()
@@ -154,10 +163,45 @@ export default function InvitePage() {
     )
   }
 
+  // ── Private 1v1: non-invited user ───────────────────────────────────────────
+  if (bet.opponentId && bet.opponentId !== profile?.id) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
+        <div className="text-center">
+          <div className="text-5xl mb-4">🔒</div>
+          <h2 className="text-xl font-bold text-white mb-2">Private bet</h2>
+          <p className="text-slate-400 text-sm mb-6">
+            {bet.creator.name} sent this bet to a specific opponent. This link isn't for you.
+          </p>
+          <button onClick={() => navigate('/dashboard')} className="text-emerald-400 hover:text-emerald-300 text-sm">
+            Go to Dashboard
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // ── Join form ────────────────────────────────────────────────────────────────
   const punishment = getPunishmentById(bet.punishment.punishmentId)
-  const homeTeam = { name: bet.homeTeamName ?? 'Home', emoji: bet.homeTeamEmoji ?? '🏠', id: 'home' }
-  const awayTeam = { name: bet.awayTeamName ?? 'Away', emoji: bet.awayTeamEmoji ?? '✈️', id: 'away' }
+
+  // Use real ESPN team IDs (stored since team_ids_migration), fall back to 'home'/'away' for old bets
+  const homeTeam = {
+    name: bet.homeTeamName ?? 'Home',
+    emoji: bet.homeTeamEmoji ?? '🏠',
+    id: bet.homeTeamId ?? 'home',
+  }
+  const awayTeam = {
+    name: bet.awayTeamName ?? 'Away',
+    emoji: bet.awayTeamEmoji ?? '✈️',
+    id: bet.awayTeamId ?? 'away',
+  }
+
+  // 1v1: opponent must pick the opposite team from the creator
+  const is1v1 = !!bet.opponentId
+  const creatorPickedHomeTeam = bet.creator.teamPickId === homeTeam.id
+  const availableTeams = is1v1
+    ? [creatorPickedHomeTeam ? awayTeam : homeTeam]
+    : [homeTeam, awayTeam]
 
   const participantCount = bet.participants?.length ?? 0
 
@@ -167,10 +211,15 @@ export default function InvitePage() {
         <div className="text-center mb-8">
           <div className="text-4xl mb-3">🏆</div>
           <h1 className="text-2xl font-black text-white mb-1">
-            <span className="text-emerald-400">{bet.creator.name}</span> started a bet!
+            <span className="text-emerald-400">{bet.creator.name}</span>{' '}
+            {is1v1 ? 'challenged you!' : 'started a bet!'}
           </h1>
-          <p className="text-slate-400 text-sm">Pick your team. Losers do the punishment.</p>
-          {participantCount > 0 && (
+          <p className="text-slate-400 text-sm">
+            {is1v1
+              ? `They picked ${creatorPickedHomeTeam ? homeTeam.name : awayTeam.name}. You're on ${creatorPickedHomeTeam ? awayTeam.name : homeTeam.name}.`
+              : 'Pick your team. Losers do the punishment.'}
+          </p>
+          {!is1v1 && participantCount > 0 && (
             <p className="text-slate-500 text-xs mt-1">{participantCount} {participantCount === 1 ? 'person' : 'people'} already in</p>
           )}
         </div>
@@ -181,11 +230,20 @@ export default function InvitePage() {
             <span className="text-slate-500">Match</span>
             <span className="text-white font-medium">{homeTeam.emoji} {homeTeam.name} vs {awayTeam.emoji} {awayTeam.name}</span>
           </div>
-          {participantCount > 0 && bet.participants && (
+          {is1v1 ? (
             <div className="flex justify-between text-sm">
-              <span className="text-slate-500">In the bet</span>
-              <span className="text-slate-300 text-xs">{bet.participants.map((p) => p.username).join(', ')}</span>
+              <span className="text-slate-500">{bet.creator.name}'s pick</span>
+              <span className="text-slate-300">
+                {creatorPickedHomeTeam ? `${homeTeam.emoji} ${homeTeam.name}` : `${awayTeam.emoji} ${awayTeam.name}`}
+              </span>
             </div>
+          ) : (
+            participantCount > 0 && bet.participants && (
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">In the bet</span>
+                <span className="text-slate-300 text-xs">{bet.participants.map((p) => p.username).join(', ')}</span>
+              </div>
+            )
           )}
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Punishment</span>
@@ -197,20 +255,25 @@ export default function InvitePage() {
         </div>
 
         {/* Team pick */}
-        <p className="text-sm text-slate-400 mb-3 font-medium">Your pick</p>
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          {[homeTeam, awayTeam].map((team) => (
+        <p className="text-sm text-slate-400 mb-3 font-medium">
+          {is1v1 ? 'Your team' : 'Pick your team'}
+        </p>
+        <div className={`grid gap-3 mb-6 ${availableTeams.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+          {availableTeams.map((team) => (
             <button
               key={team.id}
               onClick={() => setTeamPickId(team.id)}
               className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
-                teamPickId === team.id
-                  ? 'border-emerald-500 bg-emerald-500/10 text-white'
-                  : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-500'
+                is1v1
+                  ? 'border-violet-500 bg-violet-500/10 text-white cursor-default'
+                  : teamPickId === team.id
+                    ? 'border-emerald-500 bg-emerald-500/10 text-white'
+                    : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-500'
               }`}
             >
               <span className="text-3xl">{team.emoji}</span>
               <span className="font-semibold text-sm text-center">{team.name}</span>
+              {is1v1 && <span className="text-xs text-violet-400">Your side</span>}
             </button>
           ))}
         </div>
@@ -220,7 +283,7 @@ export default function InvitePage() {
           disabled={!teamPickId || accepting}
           className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-xl transition-colors mb-3"
         >
-          {accepting ? 'Joining…' : '🤝 Join Bet'}
+          {accepting ? 'Joining…' : '🤝 Accept Bet'}
         </button>
         <button
           onClick={() => navigate('/dashboard')}
