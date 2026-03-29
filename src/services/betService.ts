@@ -35,6 +35,8 @@ function rowToBet(row: Record<string, unknown>): Bet {
     awayTeamEmoji: row.away_team_emoji as string | undefined,
     homeTeamId: row.home_team_id as string | undefined,
     awayTeamId: row.away_team_id as string | undefined,
+    homeTeamLogo: row.home_team_logo as string | undefined,
+    awayTeamLogo: row.away_team_logo as string | undefined,
     homeScore: row.home_score != null ? Number(row.home_score) : undefined,
     awayScore: row.away_score != null ? Number(row.away_score) : undefined,
   }
@@ -106,6 +108,8 @@ export async function createBet(bet: Omit<Bet, 'id' | 'createdAt'>): Promise<Bet
       away_team_emoji: bet.awayTeamEmoji ?? null,
       home_team_id: bet.homeTeamId ?? null,
       away_team_id: bet.awayTeamId ?? null,
+      home_team_logo: bet.homeTeamLogo ?? null,
+      away_team_logo: bet.awayTeamLogo ?? null,
     })
     .select()
     .single()

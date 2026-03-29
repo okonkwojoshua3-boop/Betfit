@@ -8,6 +8,7 @@ export interface Team {
   shortCode: string
   badgeColor: string
   emoji: string
+  logo?: string
 }
 
 export interface MatchResult {
@@ -101,6 +102,8 @@ export interface Bet {
   awayTeamEmoji?: string
   homeTeamId?: string       // real ESPN team ID for home team
   awayTeamId?: string       // real ESPN team ID for away team
+  homeTeamLogo?: string
+  awayTeamLogo?: string
   homeScore?: number
   awayScore?: number
   participants?: BetParticipant[]

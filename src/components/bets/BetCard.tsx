@@ -4,6 +4,7 @@ import { getMatchById } from '../../data/matches'
 import { getPunishmentById } from '../../data/punishments'
 import Badge from '../ui/Badge'
 import SportIcon from '../ui/SportIcon'
+import TeamLogo from '../ui/TeamLogo'
 
 export default function BetCard({ bet }: { bet: Bet }) {
   const navigate = useNavigate()
@@ -17,6 +18,8 @@ export default function BetCard({ bet }: { bet: Bet }) {
   const awayTeamName = storedMatch?.awayTeam.name ?? bet.awayTeamName ?? 'Away'
   const homeTeamEmoji = storedMatch?.homeTeam.emoji ?? bet.homeTeamEmoji ?? '⚽'
   const awayTeamEmoji = storedMatch?.awayTeam.emoji ?? bet.awayTeamEmoji ?? '⚽'
+  const homeTeamLogo = storedMatch?.homeTeam.logo ?? bet.homeTeamLogo
+  const awayTeamLogo = storedMatch?.awayTeam.logo ?? bet.awayTeamLogo
   const homeTeamId = storedMatch?.homeTeam.id ?? bet.homeTeamId ?? 'home'
   const scheduledAt = storedMatch?.scheduledAt ?? bet.matchScheduledAt ?? ''
   const homeScore = bet.homeScore ?? storedMatch?.result?.homeScore
@@ -84,8 +87,8 @@ export default function BetCard({ bet }: { bet: Bet }) {
 
         {/* Match — broadcast style */}
         <div className="flex items-center justify-between mb-4 px-1">
-          <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
-            <span className="text-2xl">{homeTeamEmoji}</span>
+          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+            <TeamLogo name={homeTeamName} logo={homeTeamLogo} emoji={homeTeamEmoji} size="md" />
             <span className="text-xs font-semibold text-white text-center truncate w-full max-w-[80px] mx-auto leading-tight">
               {homeTeamName}
             </span>
@@ -97,14 +100,12 @@ export default function BetCard({ bet }: { bet: Bet }) {
                 {homeScore}<span className="text-slate-500 mx-1">–</span>{awayScore}
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-0.5">
-                <span className="font-score text-xl text-slate-500 tracking-widest">VS</span>
-              </div>
+              <span className="font-score text-xl text-slate-500 tracking-widest">VS</span>
             )}
           </div>
 
-          <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
-            <span className="text-2xl">{awayTeamEmoji}</span>
+          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+            <TeamLogo name={awayTeamName} logo={awayTeamLogo} emoji={awayTeamEmoji} size="md" />
             <span className="text-xs font-semibold text-white text-center truncate w-full max-w-[80px] mx-auto leading-tight">
               {awayTeamName}
             </span>

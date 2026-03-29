@@ -9,6 +9,7 @@ import { searchProfiles } from '../services/betService'
 import { createNotification } from '../services/notificationService'
 import type { Match, Sport } from '../types'
 import SportIcon from '../components/ui/SportIcon'
+import TeamLogo from '../components/ui/TeamLogo'
 
 type Step = 1 | 2 | 3 | 4
 
@@ -120,6 +121,8 @@ export default function CreateBet() {
       awayTeamEmoji: selectedMatch.awayTeam.emoji,
       homeTeamId: selectedMatch.homeTeam.id,
       awayTeamId: selectedMatch.awayTeam.id,
+      homeTeamLogo: selectedMatch.homeTeam.logo,
+      awayTeamLogo: selectedMatch.awayTeam.logo,
     })
 
     if (created.inviteToken) {
@@ -421,7 +424,7 @@ export default function CreateBet() {
                     : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-500'
                 }`}
               >
-                <span className="text-3xl">{team.emoji}</span>
+                <TeamLogo name={team.name} logo={team.logo} emoji={team.emoji} size="md" />
                 <span className="font-semibold text-sm text-center">{team.name}</span>
                 <span className="text-xs text-slate-500">{team.shortCode}</span>
               </button>

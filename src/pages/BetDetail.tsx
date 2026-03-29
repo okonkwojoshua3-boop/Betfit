@@ -11,6 +11,7 @@ import Badge from '../components/ui/Badge'
 import SportIcon from '../components/ui/SportIcon'
 import type { Bet, Match } from '../types'
 import type { LiveMatchData } from '../lib/sportsApi'
+import TeamLogo from '../components/ui/TeamLogo'
 
 /** Build a synthetic Match from stored bet fields when localStorage doesn't have it (e.g. opponent's device). */
 function matchFromBet(bet: Bet): Match | undefined {
@@ -303,7 +304,7 @@ export default function BetDetail() {
           {/* Score — broadcast graphic */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex flex-col items-center gap-2 flex-1">
-              <span className="text-5xl">{match.homeTeam.emoji}</span>
+              <TeamLogo name={match.homeTeam.name} logo={match.homeTeam.logo ?? bet.homeTeamLogo} emoji={match.homeTeam.emoji} size="xl" />
               <span className="font-display font-bold text-white text-center leading-tight">{match.homeTeam.name}</span>
               <span className="text-[11px] text-slate-600 font-medium tracking-widest uppercase">{match.homeTeam.shortCode}</span>
             </div>
@@ -335,7 +336,7 @@ export default function BetDetail() {
             </div>
 
             <div className="flex flex-col items-center gap-2 flex-1">
-              <span className="text-5xl">{match.awayTeam.emoji}</span>
+              <TeamLogo name={match.awayTeam.name} logo={match.awayTeam.logo ?? bet.awayTeamLogo} emoji={match.awayTeam.emoji} size="xl" />
               <span className="font-display font-bold text-white text-center leading-tight">{match.awayTeam.name}</span>
               <span className="text-[11px] text-slate-600 font-medium tracking-widest uppercase">{match.awayTeam.shortCode}</span>
             </div>
