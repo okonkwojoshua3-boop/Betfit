@@ -124,7 +124,29 @@ function getTeamMeta(abbr: string, sport: Sport) {
 function mapStatus(espnStatusName: string): MatchStatus {
   if (espnStatusName === 'STATUS_FINAL') return 'finished'
   if (espnStatusName === 'STATUS_IN_PROGRESS') return 'live'
+  if (espnStatusName === 'STATUS_HALFTIME') return 'live'
   return 'upcoming'
+}
+
+function extractStatusText(event: any, sport: Sport): string | undefined {
+  const statusName: string = event.status?.type?.name ?? ''
+  const clock: string = event.status?.displayClock ?? ''
+  const period: number = event.status?.period ?? 0
+
+  if (statusName === 'STATUS_HALFTIME') return 'HT'
+  if (statusName === 'STATUS_FINAL') return 'FT'
+  if (statusName !== 'STATUS_IN_PROGRESS') return undefined
+
+  if (sport === 'basketball') {
+    const label = period <= 4 ? `Q${period}` : period === 5 ? 'OT' : `OT${period - 4}`
+    return clock ? `${label} ${clock}` : label
+  }
+
+  // Football
+  if (period >= 5) return 'PENS'
+  if (period >= 3) return clock ? `ET ${clock.replace(/:.*/, '')}'` : 'ET'
+  const minute = clock ? clock.replace(/:.*/, '') : ''
+  return minute ? `${minute}'` : 'LIVE'
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -159,6 +181,9 @@ function mapEvent(event: any, sport: Sport): Match | null {
       scheduledAt: event.date,
       status,
     }
+
+    const statusText = extractStatusText(event, sport)
+    if (statusText) match.statusText = statusText
 
     if (status === 'finished' && home.score != null && away.score != null) {
       const homeScore = Number(home.score)

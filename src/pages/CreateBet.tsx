@@ -393,9 +393,11 @@ export default function CreateBet() {
                       {match.homeTeam.name} vs {match.awayTeam.name}
                     </div>
                     <div className="text-xs text-slate-500 mt-0.5">
-                      {new Date(match.scheduledAt).toLocaleDateString('en-GB', {
-                        weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-                      })}
+                      {match.status === 'live' && match.statusText
+                        ? match.statusText
+                        : new Date(match.scheduledAt).toLocaleDateString('en-GB', {
+                            weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                          })}
                     </div>
                   </button>
                 ))

@@ -24,6 +24,7 @@ export interface Match {
   awayTeam: Team
   scheduledAt: string
   status: MatchStatus
+  statusText?: string   // live progress: "67'", "HT", "Q3 4:23", "FT"
   result?: MatchResult
 }
 

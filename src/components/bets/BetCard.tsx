@@ -28,10 +28,11 @@ export default function BetCard({ bet }: { bet: Bet }) {
   const hasScore = homeScore != null && awayScore != null
 
   let statusLabel: string | null = null
-  if (storedMatch?.status === 'live') {
-    statusLabel = 'LIVE'
+  const isLive = storedMatch?.status === 'live'
+  if (isLive) {
+    statusLabel = storedMatch?.statusText ?? 'LIVE'
   } else if (hasScore || storedMatch?.status === 'finished') {
-    statusLabel = 'FT'
+    statusLabel = storedMatch?.statusText ?? 'FT'
   } else if (scheduledAt) {
     const kickoff = new Date(scheduledAt)
     if (kickoff > new Date()) {
@@ -71,13 +72,13 @@ export default function BetCard({ bet }: { bet: Bet }) {
               <SportIcon sport={sport} size="sm" />
             </div>
             <span className="text-[11px] text-slate-500 uppercase tracking-widest font-medium">{sport}</span>
-            {statusLabel === 'LIVE' && (
+            {statusLabel && isLive && (
               <span className="flex items-center gap-1 text-[11px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-full">
                 <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />
-                LIVE
+                {statusLabel}
               </span>
             )}
-            {statusLabel && statusLabel !== 'LIVE' && (
+            {statusLabel && !isLive && (
               <span className="text-[11px] font-semibold text-slate-500 bg-white/5 border border-white/8 px-1.5 py-0.5 rounded-full">
                 {statusLabel}
               </span>
