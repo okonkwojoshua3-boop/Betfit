@@ -93,6 +93,8 @@ export interface Bet {
   losingTeamId?: string      // group bets: team id that lost, or 'draw'
   inviteToken?: string
   opponentId?: string       // set for 1v1 bets — only this user can join
+  sport?: Sport             // stored so BetDetail works on any device
+  matchScheduledAt?: string // stored so BetDetail works on any device
   homeTeamName?: string
   awayTeamName?: string
   homeTeamEmoji?: string

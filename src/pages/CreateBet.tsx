@@ -112,6 +112,8 @@ export default function CreateBet() {
       punishment: { punishmentId: state.punishmentId, reps: state.punishmentReps },
       status: 'pending',
       opponentId: selectedOpponent?.id,
+      sport: selectedMatch.sport,
+      matchScheduledAt: selectedMatch.scheduledAt,
       homeTeamName: selectedMatch.homeTeam.name,
       awayTeamName: selectedMatch.awayTeam.name,
       homeTeamEmoji: selectedMatch.homeTeam.emoji,

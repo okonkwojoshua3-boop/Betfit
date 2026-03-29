@@ -9,8 +9,33 @@ import { useLiveScore } from '../hooks/useLiveScore'
 import PunishmentBanner from '../components/bets/PunishmentBanner'
 import Badge from '../components/ui/Badge'
 import SportIcon from '../components/ui/SportIcon'
-import type { Match } from '../types'
+import type { Bet, Match } from '../types'
 import type { LiveMatchData } from '../lib/sportsApi'
+
+/** Build a synthetic Match from stored bet fields when localStorage doesn't have it (e.g. opponent's device). */
+function matchFromBet(bet: Bet): Match | undefined {
+  if (!bet.homeTeamId || !bet.awayTeamId) return undefined
+  return {
+    id: bet.matchId,
+    sport: bet.sport ?? 'football',
+    homeTeam: {
+      id: bet.homeTeamId,
+      name: bet.homeTeamName ?? 'Home',
+      shortCode: (bet.homeTeamName ?? 'HOM').slice(0, 3).toUpperCase(),
+      badgeColor: '',
+      emoji: bet.homeTeamEmoji ?? '🏠',
+    },
+    awayTeam: {
+      id: bet.awayTeamId,
+      name: bet.awayTeamName ?? 'Away',
+      shortCode: (bet.awayTeamName ?? 'AWY').slice(0, 3).toUpperCase(),
+      badgeColor: '',
+      emoji: bet.awayTeamEmoji ?? '✈️',
+    },
+    scheduledAt: bet.matchScheduledAt ?? bet.createdAt,
+    status: 'upcoming',
+  }
+}
 
 // ── Match status helper ───────────────────────────────────────────────────────
 function MatchStatusBadge({ match, liveData }: { match: Match; liveData: LiveMatchData | null }) {
@@ -195,7 +220,7 @@ export default function BetDetail() {
   const { profile } = useAuth()
 
   const bet = id ? getBetById(id) : undefined
-  const match = bet ? getMatchById(bet.matchId) : undefined
+  const match = bet ? (getMatchById(bet.matchId) ?? matchFromBet(bet)) : undefined
   const punishment = bet ? getPunishmentById(bet.punishment.punishmentId) : undefined
 
   const betResolved = bet?.status === 'punishment_pending' || bet?.status === 'completed'

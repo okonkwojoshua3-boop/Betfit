@@ -13,3 +13,9 @@ alter table bets
 -- Likely already exists from the base schema; this is a no-op if so.
 alter table bets
   add column if not exists opponent_id uuid references profiles(id);
+
+-- Store sport and match kickoff time so BetDetail can render on any device,
+-- not just the creator's (which has the match cached in localStorage).
+alter table bets
+  add column if not exists sport text,
+  add column if not exists match_scheduled_at timestamptz;

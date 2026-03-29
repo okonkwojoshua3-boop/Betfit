@@ -27,6 +27,8 @@ function rowToBet(row: Record<string, unknown>): Bet {
     resolvedAt: row.resolved_at as string | undefined,
     inviteToken: row.invite_token as string | undefined,
     opponentId: row.opponent_id as string | undefined,
+    sport: row.sport as import('../types').Sport | undefined,
+    matchScheduledAt: row.match_scheduled_at as string | undefined,
     homeTeamName: row.home_team_name as string | undefined,
     awayTeamName: row.away_team_name as string | undefined,
     homeTeamEmoji: row.home_team_emoji as string | undefined,
@@ -66,9 +68,9 @@ export async function fetchBets(userId: string): Promise<Bet[]> {
     .order('created_at', { ascending: false })
 
   if (participantBetIds.length > 0) {
-    query = query.or(`creator_id.eq.${userId},id.in.(${participantBetIds.join(',')})`)
+    query = query.or(`creator_id.eq.${userId},opponent_id.eq.${userId},id.in.(${participantBetIds.join(',')})`)
   } else {
-    query = query.eq('creator_id', userId)
+    query = query.or(`creator_id.eq.${userId},opponent_id.eq.${userId}`)
   }
 
   const { data, error } = await query
@@ -96,6 +98,8 @@ export async function createBet(bet: Omit<Bet, 'id' | 'createdAt'>): Promise<Bet
       punishment_reps: bet.punishment.reps,
       status: 'pending',
       opponent_id: bet.opponentId ?? null,
+      sport: bet.sport ?? null,
+      match_scheduled_at: bet.matchScheduledAt ?? null,
       home_team_name: bet.homeTeamName ?? null,
       away_team_name: bet.awayTeamName ?? null,
       home_team_emoji: bet.homeTeamEmoji ?? null,
