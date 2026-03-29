@@ -23,8 +23,14 @@ export default function BetCard({ bet }: { bet: Bet }) {
   const homeTeamId = storedMatch?.homeTeam.id ?? bet.homeTeamId ?? 'home'
   const awayTeamId = storedMatch?.awayTeam.id ?? bet.awayTeamId ?? 'away'
   const scheduledAt = storedMatch?.scheduledAt ?? bet.matchScheduledAt ?? ''
-  const homeScore = bet.homeScore ?? storedMatch?.result?.homeScore
-  const awayScore = bet.awayScore ?? storedMatch?.result?.awayScore
+  // Only use bet.homeScore/awayScore when the bet is settled — DB may default to 0 for unresolved bets
+  const betSettled = bet.status === 'punishment_pending' || bet.status === 'completed'
+  const homeScore = betSettled
+    ? (bet.homeScore ?? storedMatch?.result?.homeScore)
+    : storedMatch?.result?.homeScore
+  const awayScore = betSettled
+    ? (bet.awayScore ?? storedMatch?.result?.awayScore)
+    : storedMatch?.result?.awayScore
   const hasScore = homeScore != null && awayScore != null
 
   let statusLabel: string | null = null

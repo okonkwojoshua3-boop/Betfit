@@ -259,9 +259,20 @@ export default function BetDetail() {
   const punishmentText = formatPunishment(punishment, bet.punishment.reps)
   const loserNames = losers.map((p) => p.username).join(', ')
 
-  // Resolved score: live data takes priority, then stored bet scores
-  const displayHomeScore = liveData?.homeScore ?? bet.homeScore ?? null
-  const displayAwayScore = liveData?.awayScore ?? bet.awayScore ?? null
+  // Only show scores when the match is actually in progress or finished —
+  // ESPN returns homeScore:0/awayScore:0 for scheduled matches too, which we must ignore.
+  // Also, only trust bet.homeScore/awayScore once the bet is settled (DB may default to 0).
+  const matchIsActive = liveData?.isLive || liveData?.isHalfTime || liveData?.isFinished
+  const displayHomeScore = matchIsActive
+    ? (liveData!.homeScore ?? null)
+    : betResolved
+      ? (bet.homeScore ?? null)
+      : null
+  const displayAwayScore = matchIsActive
+    ? (liveData!.awayScore ?? null)
+    : betResolved
+      ? (bet.awayScore ?? null)
+      : null
 
   // Show punishment banner on first visit when resolved
   if (bet.status === 'punishment_pending' && losingTeamId && !isDraw && showBanner) {
@@ -311,7 +322,7 @@ export default function BetDetail() {
 
             <div className="flex-shrink-0 mx-4 text-center min-w-[120px]">
               {/* Status badge — above the score */}
-              {liveData?.statusText ? (
+              {matchIsActive && liveData?.statusText ? (
                 <div className="mb-2 flex justify-center">
                   {liveData.isHalfTime ? (
                     <span className="text-sm font-bold text-amber-400 bg-amber-500/10 border border-amber-500/25 px-3 py-1 rounded-full tracking-wide">
@@ -328,7 +339,7 @@ export default function BetDetail() {
                     </span>
                   ) : null}
                 </div>
-              ) : !displayHomeScore && match.scheduledAt ? (
+              ) : displayHomeScore == null && match.scheduledAt ? (
                 /* Kickoff time when match hasn't started */
                 <div className="mb-2 text-xs text-slate-500 font-medium">
                   {new Date(match.scheduledAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
