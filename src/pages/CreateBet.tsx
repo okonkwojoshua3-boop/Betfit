@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PUNISHMENTS } from '../data/punishments'
 import { useBets } from '../store/BetContext'
 import { useAuth } from '../store/AuthContext'
 import { useLiveMatches } from '../hooks/useLiveMatches'
 import { saveMatch } from '../store/matchStore'
+import { searchProfiles } from '../services/betService'
+import { createNotification } from '../services/notificationService'
 import type { Match, Sport } from '../types'
 import SportIcon from '../components/ui/SportIcon'
 
@@ -39,6 +41,31 @@ export default function CreateBet() {
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const liveMatches = useLiveMatches()
+
+  // Opponent search
+  const [opponentQuery, setOpponentQuery] = useState('')
+  const [opponentResults, setOpponentResults] = useState<{ id: string; username: string }[]>([])
+  const [selectedOpponent, setSelectedOpponent] = useState<{ id: string; username: string } | null>(null)
+  const [searching, setSearching] = useState(false)
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [notifiedOpponent, setNotifiedOpponent] = useState(false)
+
+  useEffect(() => {
+    if (!opponentQuery.trim() || selectedOpponent) {
+      setOpponentResults([])
+      return
+    }
+    if (searchTimeout.current) clearTimeout(searchTimeout.current)
+    setSearching(true)
+    searchTimeout.current = setTimeout(async () => {
+      const results = await searchProfiles(opponentQuery, profile?.id ?? '')
+      setOpponentResults(results)
+      setSearching(false)
+    }, 300)
+    return () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current)
+    }
+  }, [opponentQuery, profile?.id, selectedOpponent])
 
   const update = (patch: Partial<WizardState>) =>
     setState((prev) => ({ ...prev, ...patch }))
@@ -91,7 +118,18 @@ export default function CreateBet() {
     })
 
     if (created.inviteToken) {
-      setInviteLink(`${window.location.origin}/invite/${created.inviteToken}`)
+      const link = `${window.location.origin}/invite/${created.inviteToken}`
+      setInviteLink(link)
+      if (selectedOpponent) {
+        createNotification(
+          selectedOpponent.id,
+          created.id,
+          `${profile.username} challenged you to a bet! Click to accept.`,
+          '',
+          '',
+        ).catch(console.error)
+        setNotifiedOpponent(true)
+      }
     } else {
       navigate('/dashboard')
     }
@@ -112,9 +150,15 @@ export default function CreateBet() {
       <div className="max-w-lg mx-auto px-4 py-16 text-center">
         <div className="text-5xl mb-4">🔗</div>
         <h2 className="text-2xl font-black text-white mb-2">Bet Created!</h2>
-        <p className="text-slate-400 text-sm mb-2">
-          Share this link with your friends. Everyone who clicks it picks their team — losers do the punishment.
-        </p>
+        {notifiedOpponent && selectedOpponent ? (
+          <p className="text-slate-400 text-sm mb-2">
+            <span className="text-violet-400 font-semibold">{selectedOpponent.username}</span> has been notified. Share this link as a backup, or send it to others too.
+          </p>
+        ) : (
+          <p className="text-slate-400 text-sm mb-2">
+            Share this link with your friends. Everyone who clicks it picks their team — losers do the punishment.
+          </p>
+        )}
         <p className="text-slate-500 text-xs mb-8">The link stays open until the match is resolved.</p>
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4 text-left">
           <p className="text-xs text-slate-500 mb-2 uppercase tracking-wide">Invite link</p>
@@ -178,23 +222,88 @@ export default function CreateBet() {
         })}
       </div>
 
-      {/* Step 1: Confirm it's you */}
+      {/* Step 1: You + optional opponent */}
       {step === 1 && (
         <div className="space-y-5 animate-slide-up">
-          <h2 className="text-lg font-bold text-white">Ready to bet?</h2>
-          <div className="bg-slate-800 border border-emerald-500/40 rounded-xl px-4 py-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold">
-              {profile?.username?.[0]?.toUpperCase()}
+          <h2 className="text-lg font-bold text-white">Players</h2>
+
+          {/* Creator */}
+          <div>
+            <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">You</p>
+            <div className="bg-slate-800 border border-emerald-500/40 rounded-xl px-4 py-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-sm">
+                {profile?.username?.[0]?.toUpperCase()}
+              </div>
+              <div>
+                <p className="text-white font-semibold">{profile?.username}</p>
+                <p className="text-xs text-slate-400">Betting as you</p>
+              </div>
+              <span className="ml-auto text-xs text-emerald-400 font-medium">You</span>
             </div>
-            <div>
-              <p className="text-white font-semibold">{profile?.username}</p>
-              <p className="text-xs text-slate-400">Betting as you</p>
-            </div>
-            <span className="ml-auto text-xs text-emerald-400 font-medium">You</span>
           </div>
-          <p className="text-sm text-slate-400">
-            After creating the bet, you'll get a link to share with friends. Everyone picks their team — whoever picks the losing side does the punishment.
-          </p>
+
+          {/* Opponent */}
+          <div>
+            <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Opponent <span className="text-slate-600 normal-case">(optional)</span></p>
+
+            {selectedOpponent ? (
+              <div className="bg-slate-800 border border-violet-500/40 rounded-xl px-4 py-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 font-bold text-sm">
+                  {selectedOpponent.username[0].toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-white font-semibold">{selectedOpponent.username}</p>
+                  <p className="text-xs text-slate-400">Will be notified to accept</p>
+                </div>
+                <button
+                  onClick={() => { setSelectedOpponent(null); setOpponentQuery('') }}
+                  className="ml-auto text-xs text-slate-500 hover:text-white transition-colors"
+                >
+                  ✕ Remove
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search by username…"
+                    value={opponentQuery}
+                    onChange={(e) => setOpponentQuery(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 focus:border-violet-500 rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm outline-none transition-colors"
+                  />
+                  {searching && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">…</span>
+                  )}
+                </div>
+
+                {opponentResults.length > 0 && (
+                  <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+                    {opponentResults.map((u, i) => (
+                      <button
+                        key={u.id}
+                        onClick={() => { setSelectedOpponent(u); setOpponentQuery(''); setOpponentResults([]) }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-700 transition-colors ${i > 0 ? 'border-t border-slate-700' : ''}`}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 font-bold text-xs">
+                          {u.username[0].toUpperCase()}
+                        </div>
+                        <span className="text-white text-sm font-medium">{u.username}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {opponentQuery.trim() && !searching && opponentResults.length === 0 && (
+                  <p className="text-xs text-slate-500 px-1">No users found for "{opponentQuery}"</p>
+                )}
+
+                <p className="text-xs text-slate-500 px-1">
+                  Or skip this — you'll get a shareable invite link after creation.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

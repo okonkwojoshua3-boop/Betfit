@@ -171,6 +171,22 @@ export async function completeBet(betId: string): Promise<void> {
   if (error) throw error
 }
 
+// ── Profile search ───────────────────────────────────────────────────────────
+export async function searchProfiles(
+  query: string,
+  excludeUserId: string,
+): Promise<{ id: string; username: string }[]> {
+  if (!query.trim()) return []
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username')
+    .ilike('username', `%${query.trim()}%`)
+    .neq('id', excludeUserId)
+    .limit(8)
+  if (error) return []
+  return (data ?? []) as { id: string; username: string }[]
+}
+
 // ── Invite link ───────────────────────────────────────────────────────────────
 export async function fetchBetByToken(token: string): Promise<Bet | null> {
   const { data, error } = await supabase
