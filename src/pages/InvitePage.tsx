@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/AuthContext'
 import { fetchBetByToken, acceptInvite } from '../services/betService'
 import { getPunishmentById } from '../data/punishments'
+import SportIcon from '../components/ui/SportIcon'
 import type { Bet } from '../types'
 
 export default function InvitePage() {
@@ -184,114 +185,137 @@ export default function InvitePage() {
   // ── Join form ────────────────────────────────────────────────────────────────
   const punishment = getPunishmentById(bet.punishment.punishmentId)
 
-  // Use real ESPN team IDs (stored since team_ids_migration), fall back to 'home'/'away' for old bets
   const homeTeam = {
     name: bet.homeTeamName ?? 'Home',
-    emoji: bet.homeTeamEmoji ?? '🏠',
+    emoji: bet.homeTeamEmoji ?? '⚽',
     id: bet.homeTeamId ?? 'home',
   }
   const awayTeam = {
     name: bet.awayTeamName ?? 'Away',
-    emoji: bet.awayTeamEmoji ?? '✈️',
+    emoji: bet.awayTeamEmoji ?? '⚽',
     id: bet.awayTeamId ?? 'away',
   }
 
-  // 1v1: opponent must pick the opposite team from the creator
   const is1v1 = !!bet.opponentId
   const creatorPickedHomeTeam = bet.creator.teamPickId === homeTeam.id
-  const availableTeams = is1v1
-    ? [creatorPickedHomeTeam ? awayTeam : homeTeam]
-    : [homeTeam, awayTeam]
-
   const participantCount = bet.participants?.length ?? 0
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4 py-8">
-      <div className="max-w-sm w-full">
-        <div className="text-center mb-8">
-          <div className="text-4xl mb-3">🏆</div>
-          <h1 className="text-2xl font-black text-white mb-1">
-            <span className="text-emerald-400">{bet.creator.name}</span>{' '}
-            {is1v1 ? 'challenged you!' : 'started a bet!'}
-          </h1>
-          <p className="text-slate-400 text-sm">
-            {is1v1
-              ? `They picked ${creatorPickedHomeTeam ? homeTeam.name : awayTeam.name}. You're on ${creatorPickedHomeTeam ? awayTeam.name : homeTeam.name}.`
-              : 'Pick your team. Losers do the punishment.'}
-          </p>
-          {!is1v1 && participantCount > 0 && (
-            <p className="text-slate-500 text-xs mt-1">{participantCount} {participantCount === 1 ? 'person' : 'people'} already in</p>
-          )}
-        </div>
-
-        {/* Bet summary */}
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-6 space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Match</span>
-            <span className="text-white font-medium">{homeTeam.emoji} {homeTeam.name} vs {awayTeam.emoji} {awayTeam.name}</span>
-          </div>
-          {is1v1 ? (
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-500">{bet.creator.name}'s pick</span>
-              <span className="text-slate-300">
-                {creatorPickedHomeTeam ? `${homeTeam.emoji} ${homeTeam.name}` : `${awayTeam.emoji} ${awayTeam.name}`}
-              </span>
-            </div>
-          ) : (
-            participantCount > 0 && bet.participants && (
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">In the bet</span>
-                <span className="text-slate-300 text-xs">{bet.participants.map((p) => p.username).join(', ')}</span>
-              </div>
-            )
-          )}
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Punishment</span>
-            <span className="text-amber-400 font-medium">
-              {bet.punishment.reps} {punishment?.name ?? 'reps'}
-              {punishment?.isTimeBased ? ' secs' : ''}
-            </span>
-          </div>
-        </div>
-
-        {/* Team pick */}
-        <p className="text-sm text-slate-400 mb-3 font-medium">
-          {is1v1 ? 'Your team' : 'Pick your team'}
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-black text-white mb-1">
+          <span className="text-emerald-400">{bet.creator.name}</span>{' '}
+          {is1v1 ? 'challenged you!' : 'invited you to a bet!'}
+        </h1>
+        <p className="text-slate-400 text-sm">
+          {is1v1
+            ? `They picked ${creatorPickedHomeTeam ? homeTeam.name : awayTeam.name} — you're on ${creatorPickedHomeTeam ? awayTeam.name : homeTeam.name}.`
+            : 'Pick your team. Losers do the punishment.'}
         </p>
-        <div className={`grid gap-3 mb-6 ${availableTeams.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-          {availableTeams.map((team) => (
-            <button
-              key={team.id}
-              onClick={() => setTeamPickId(team.id)}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
-                is1v1
-                  ? 'border-violet-500 bg-violet-500/10 text-white cursor-default'
-                  : teamPickId === team.id
-                    ? 'border-emerald-500 bg-emerald-500/10 text-white'
-                    : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-500'
-              }`}
-            >
-              <span className="text-3xl">{team.emoji}</span>
-              <span className="font-semibold text-sm text-center">{team.name}</span>
-              {is1v1 && <span className="text-xs text-violet-400">Your side</span>}
-            </button>
-          ))}
+      </div>
+
+      {/* Match card */}
+      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 mb-4">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <SportIcon sport={bet.sport ?? 'football'} />
+            <span className="text-slate-400 text-sm capitalize">{bet.sport ?? 'football'}</span>
+          </div>
+          {bet.matchScheduledAt && (
+            <span className="text-xs text-slate-500">
+              {new Date(bet.matchScheduledAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}{' '}
+              {new Date(bet.matchScheduledAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
         </div>
 
-        <button
-          onClick={handleAccept}
-          disabled={!teamPickId || accepting}
-          className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-xl transition-colors mb-3"
-        >
-          {accepting ? 'Joining…' : '🤝 Accept Bet'}
-        </button>
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 font-medium py-3 rounded-xl transition-colors text-sm"
-        >
-          Back
-        </button>
+        {/* Teams VS */}
+        <div className="flex items-center justify-center gap-4">
+          <div className="text-center flex-1">
+            <div className="text-5xl mb-2">{homeTeam.emoji}</div>
+            <div className="font-bold text-white">{homeTeam.name}</div>
+            {creatorPickedHomeTeam && (
+              <div className="text-xs text-emerald-400 mt-1">{bet.creator.name}'s pick</div>
+            )}
+          </div>
+          <div className="text-slate-500 font-bold text-lg px-2">VS</div>
+          <div className="text-center flex-1">
+            <div className="text-5xl mb-2">{awayTeam.emoji}</div>
+            <div className="font-bold text-white">{awayTeam.name}</div>
+            {!creatorPickedHomeTeam && (
+              <div className="text-xs text-emerald-400 mt-1">{bet.creator.name}'s pick</div>
+            )}
+          </div>
+        </div>
+
+        {!is1v1 && participantCount > 0 && bet.participants && (
+          <p className="text-xs text-slate-500 text-center mt-4">
+            Already in: {bet.participants.map((p) => p.username).join(', ')}
+          </p>
+        )}
       </div>
+
+      {/* Punishment */}
+      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-6 flex items-center gap-3">
+        <span className="text-2xl">{punishment?.emoji ?? '💪'}</span>
+        <div>
+          <div className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Loser's punishment</div>
+          <div className="text-amber-400 font-bold text-lg">
+            {bet.punishment.reps} {punishment?.name ?? 'reps'}
+            {punishment?.isTimeBased ? ' secs' : ''}
+          </div>
+        </div>
+      </div>
+
+      {/* Team pick */}
+      {is1v1 ? (
+        <>
+          <p className="text-sm text-slate-400 mb-3 font-medium">Your team</p>
+          <div
+            className="flex flex-col items-center gap-2 p-5 rounded-2xl border border-emerald-500 bg-emerald-500/10 mb-6"
+          >
+            <span className="text-4xl">{creatorPickedHomeTeam ? awayTeam.emoji : homeTeam.emoji}</span>
+            <span className="font-bold text-white text-lg">{creatorPickedHomeTeam ? awayTeam.name : homeTeam.name}</span>
+            <span className="text-xs text-emerald-400">Your side — assigned automatically</span>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-slate-400 mb-3 font-medium">Pick your team</p>
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            {[homeTeam, awayTeam].map((team) => (
+              <button
+                key={team.id}
+                onClick={() => setTeamPickId(team.id)}
+                className={`flex flex-col items-center gap-2 p-5 rounded-2xl border transition-all ${
+                  teamPickId === team.id
+                    ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30'
+                    : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-500 hover:bg-slate-700/50'
+                }`}
+              >
+                <span className="text-4xl">{team.emoji}</span>
+                <span className="font-semibold text-sm text-center text-white">{team.name}</span>
+                {teamPickId === team.id && <span className="text-xs text-emerald-400">Selected ✓</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      <button
+        onClick={handleAccept}
+        disabled={!teamPickId || accepting}
+        className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-4 rounded-xl transition-all duration-200 shadow-sm hover:shadow-emerald-500/30 hover:shadow-md mb-3 text-base"
+      >
+        {accepting ? 'Joining…' : '🤝 Accept Bet'}
+      </button>
+      <button
+        onClick={() => navigate('/dashboard')}
+        className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 font-medium py-3 rounded-xl transition-colors text-sm"
+      >
+        Back
+      </button>
     </div>
   )
 }
