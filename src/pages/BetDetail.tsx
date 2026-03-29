@@ -269,107 +269,147 @@ export default function BetDetail() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
-      <button onClick={() => navigate(-1)} className="text-slate-400 hover:text-white text-sm mb-6 flex items-center gap-1">
+      <button onClick={() => navigate(-1)} className="text-slate-500 hover:text-white text-sm mb-6 flex items-center gap-1.5 transition-colors">
         ← Back
       </button>
 
-      {/* Match header */}
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 mb-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <SportIcon sport={match.sport} />
-            <span className="text-slate-400 text-sm capitalize">{match.sport}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MatchStatusBadge match={match} liveData={liveData} />
-            <Badge status={bet.status} />
-          </div>
-        </div>
+      {/* Match header — broadcast style */}
+      <div
+        className="relative overflow-hidden rounded-3xl mb-4 animate-fade-up animate-fill-both"
+        style={{
+          background: 'linear-gradient(160deg, #111D30 0%, #0D1525 100%)',
+          border: liveData?.isLive ? '1px solid rgba(239,68,68,0.25)' : '1px solid rgba(255,255,255,0.07)',
+          boxShadow: liveData?.isLive ? '0 0 40px rgba(239,68,68,0.1)' : '0 4px 24px rgba(0,0,0,0.4)',
+        }}
+      >
+        {/* Top accent bar */}
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: liveData?.isLive ? 'linear-gradient(90deg,transparent,rgba(239,68,68,0.7),transparent)' : 'linear-gradient(90deg,transparent,rgba(34,214,114,0.4),transparent)' }} />
 
-        {/* Score */}
-        <div className="flex items-center justify-center gap-4 mb-6">
-          <div className="text-center">
-            <div className="text-4xl mb-1">{match.homeTeam.emoji}</div>
-            <div className="font-bold text-white">{match.homeTeam.name}</div>
-            <div className="text-xs text-slate-500">{match.homeTeam.shortCode}</div>
-          </div>
-          <div className="text-center px-4">
-            {displayHomeScore != null && displayAwayScore != null ? (
-              <div className={`text-3xl font-black ${liveData?.isLive ? 'text-red-400' : 'text-white'}`}>
-                {displayHomeScore} – {displayAwayScore}
+        <div className="p-6">
+          {/* Status row */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center">
+                <SportIcon sport={match.sport} />
               </div>
-            ) : (
-              <div className="text-slate-500 font-bold text-lg">VS</div>
-            )}
-          </div>
-          <div className="text-center">
-            <div className="text-4xl mb-1">{match.awayTeam.emoji}</div>
-            <div className="font-bold text-white">{match.awayTeam.name}</div>
-            <div className="text-xs text-slate-500">{match.awayTeam.shortCode}</div>
-          </div>
-        </div>
-
-        {/* All participants */}
-        {participants.length > 0 ? (
-          <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">
-              {participants.length} {participants.length === 1 ? 'player' : 'players'}
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {participants.map((p) => {
-                const team = match.homeTeam.id === p.teamPickId ? match.homeTeam : match.awayTeam
-                const isLoser = !isDraw && losingTeamId && p.teamPickId === losingTeamId
-                const isWinner = !isDraw && losingTeamId && p.teamPickId !== losingTeamId
-                return (
-                  <div
-                    key={p.userId}
-                    className={`bg-slate-900/60 border rounded-xl p-3 ${
-                      isLoser ? 'border-red-500/40' : isWinner ? 'border-emerald-500/40' : 'border-slate-700'
-                    }`}
-                  >
-                    <div className="text-xs text-slate-500 mb-1 truncate">{p.username}</div>
-                    <div className="flex items-center gap-1.5">
-                      <span>{team.emoji}</span>
-                      <span className="font-semibold text-white text-sm truncate">{team.name}</span>
-                    </div>
-                    {isWinner && <div className="text-xs text-emerald-400 mt-1">🎉 Won!</div>}
-                    {isLoser && <div className="text-xs text-red-400 mt-1">😬 Lost</div>}
-                    {isDraw && losingTeamId && <div className="text-xs text-slate-500 mt-1">Draw</div>}
-                  </div>
-                )
-              })}
+              <span className="text-[11px] text-slate-500 uppercase tracking-widest font-medium">{match.sport}</span>
             </div>
-            {bet.status === 'pending' && (
-              <p className="text-xs text-slate-500 mt-3 text-center">
-                Waiting for more players to join via the invite link
-              </p>
-            )}
+            <div className="flex items-center gap-2">
+              <MatchStatusBadge match={match} liveData={liveData} />
+              <Badge status={bet.status} />
+            </div>
           </div>
-        ) : (
-          <p className="text-xs text-slate-500 text-center">No participants yet</p>
-        )}
+
+          {/* Score — broadcast graphic */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col items-center gap-2 flex-1">
+              <span className="text-5xl">{match.homeTeam.emoji}</span>
+              <span className="font-display font-bold text-white text-center leading-tight">{match.homeTeam.name}</span>
+              <span className="text-[11px] text-slate-600 font-medium tracking-widest uppercase">{match.homeTeam.shortCode}</span>
+            </div>
+
+            <div className="flex-shrink-0 mx-4 text-center">
+              {displayHomeScore != null && displayAwayScore != null ? (
+                <div className="flex flex-col items-center gap-1">
+                  <div
+                    className="font-score leading-none tracking-wider px-4 py-2 rounded-2xl"
+                    style={{
+                      fontSize: '52px',
+                      color: liveData?.isLive ? '#F87171' : '#F0F4FF',
+                      background: liveData?.isLive ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.04)',
+                      border: liveData?.isLive ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(255,255,255,0.06)',
+                    }}
+                  >
+                    {displayHomeScore} – {displayAwayScore}
+                  </div>
+                  {liveData?.isLive && (
+                    <span className="text-xs text-red-400 font-bold tracking-wide flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />
+                      {liveData.statusText}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="font-score text-3xl text-slate-600 tracking-widest px-4">VS</div>
+              )}
+            </div>
+
+            <div className="flex flex-col items-center gap-2 flex-1">
+              <span className="text-5xl">{match.awayTeam.emoji}</span>
+              <span className="font-display font-bold text-white text-center leading-tight">{match.awayTeam.name}</span>
+              <span className="text-[11px] text-slate-600 font-medium tracking-widest uppercase">{match.awayTeam.shortCode}</span>
+            </div>
+          </div>
+
+          {/* Participants */}
+          {participants.length > 0 ? (
+            <div>
+              <div className="h-px bg-white/5 mb-4" />
+              <p className="text-[11px] text-slate-600 uppercase tracking-widest mb-3">
+                {participants.length} {participants.length === 1 ? 'player' : 'players'}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {participants.map((p) => {
+                  const team = match.homeTeam.id === p.teamPickId ? match.homeTeam : match.awayTeam
+                  const isLoser = !isDraw && losingTeamId && p.teamPickId === losingTeamId
+                  const isWinner = !isDraw && losingTeamId && p.teamPickId !== losingTeamId
+                  return (
+                    <div
+                      key={p.userId}
+                      className="rounded-xl p-3 transition-colors"
+                      style={{
+                        background: isLoser ? 'rgba(239,68,68,0.06)' : isWinner ? 'rgba(34,214,114,0.06)' : 'rgba(255,255,255,0.03)',
+                        border: isLoser ? '1px solid rgba(239,68,68,0.2)' : isWinner ? '1px solid rgba(34,214,114,0.2)' : '1px solid rgba(255,255,255,0.06)',
+                      }}
+                    >
+                      <div className="text-[11px] text-slate-500 mb-1 truncate">{p.username}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span>{team.emoji}</span>
+                        <span className="font-semibold text-white text-sm truncate">{team.name}</span>
+                      </div>
+                      {isWinner && <div className="text-[11px] text-neon-green mt-1.5 font-semibold">🎉 Won!</div>}
+                      {isLoser && <div className="text-[11px] text-red-400 mt-1.5 font-semibold">😬 Lost</div>}
+                      {isDraw && losingTeamId && <div className="text-[11px] text-slate-500 mt-1.5">Draw</div>}
+                    </div>
+                  )
+                })}
+              </div>
+              {bet.status === 'pending' && (
+                <p className="text-[11px] text-slate-600 mt-3 text-center">
+                  Waiting for more players to join via the invite link
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-600 text-center pt-2">No participants yet</p>
+          )}
+        </div>
       </div>
 
       {/* Punishment */}
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 mb-4">
+      <div
+        className="rounded-2xl p-5 mb-4 animate-fade-up animate-fill-both animate-delay-100"
+        style={{ background: 'linear-gradient(160deg, #1A1505, #110E03)', border: '1px solid rgba(245,158,11,0.15)' }}
+      >
+        <div className="absolute-top-0" />
         <div className="flex items-center gap-2 mb-2">
           <span className="text-xl">{punishment.emoji}</span>
-          <h3 className="font-bold text-white">Punishment</h3>
+          <h3 className="font-display font-bold text-white">Punishment</h3>
         </div>
-        <p className="text-amber-400 font-bold text-lg">{punishmentText}</p>
-        {isDraw && <p className="text-sm text-slate-400 mt-1">It was a draw — no punishment!</p>}
+        <p className="text-2xl font-display font-bold gradient-text-amber">{punishmentText}</p>
+        {isDraw && <p className="text-sm text-slate-500 mt-2">It was a draw — no punishment!</p>}
         {losers.length > 0 && bet.status !== 'completed' && (
-          <p className="text-sm text-slate-400 mt-1">
-            {loserNames} must complete this.
+          <p className="text-sm text-slate-500 mt-2">
+            <span className="text-red-400 font-semibold">{loserNames}</span> must complete this.
           </p>
         )}
         {losers.length > 0 && bet.status === 'completed' && (
-          <p className="text-sm text-slate-400 mt-1">
-            {loserNames} completed this.
+          <p className="text-sm text-slate-500 mt-2">
+            <span className="text-slate-300 font-semibold">{loserNames}</span> completed this.
           </p>
         )}
         {winners.length > 0 && (
-          <p className="text-sm text-emerald-400 mt-1">
+          <p className="text-sm text-neon-green mt-2 font-semibold">
             🎉 {winners.map((p) => p.username).join(', ')} won!
           </p>
         )}
@@ -389,19 +429,25 @@ export default function BetDetail() {
 
       {/* Waiting for result */}
       {bet.status === 'active' && !liveData?.isLive && !liveData?.isFinished && (
-        <div className="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-center text-sm text-slate-500">
+        <div
+          className="rounded-xl px-4 py-3 text-center text-sm text-slate-600 animate-fade-up animate-fill-both animate-delay-200"
+          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
+        >
           Scores update automatically every 45s once the match starts
         </div>
       )}
 
       {/* Completed */}
       {bet.status === 'completed' && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-5 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+        <div
+          className="rounded-2xl px-5 py-4 flex items-center justify-between animate-fade-up animate-fill-both animate-delay-200"
+          style={{ background: 'rgba(34,214,114,0.06)', border: '1px solid rgba(34,214,114,0.15)' }}
+        >
+          <div className="flex items-center gap-2 text-neon-green font-semibold text-sm">
             <span>✅</span>
             <span>Bet settled</span>
           </div>
-          <span className="text-slate-400 text-xs">
+          <span className="text-slate-500 text-xs">
             {bet.resolvedAt
               ? new Date(bet.resolvedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
               : '—'}
