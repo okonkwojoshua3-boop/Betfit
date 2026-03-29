@@ -20,7 +20,7 @@ export function useLiveScore(
     if (!data) return
     setLiveData(data)
 
-    if (data.isFinished && !resolvedRef.current && data.homeScore != null && data.awayScore != null) {
+    if (data.isFinished && !data.isHalfTime && !resolvedRef.current && data.homeScore != null && data.awayScore != null) {
       resolvedRef.current = true
       const winnerId =
         data.homeScore > data.awayScore

@@ -309,26 +309,44 @@ export default function BetDetail() {
               <span className="text-[11px] text-slate-600 font-medium tracking-widest uppercase">{match.homeTeam.shortCode}</span>
             </div>
 
-            <div className="flex-shrink-0 mx-4 text-center">
-              {displayHomeScore != null && displayAwayScore != null ? (
-                <div className="flex flex-col items-center gap-1">
-                  <div
-                    className="font-score leading-none tracking-wider px-4 py-2 rounded-2xl"
-                    style={{
-                      fontSize: '52px',
-                      color: liveData?.isLive ? '#F87171' : '#F0F4FF',
-                      background: liveData?.isLive ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.04)',
-                      border: liveData?.isLive ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(255,255,255,0.06)',
-                    }}
-                  >
-                    {displayHomeScore} – {displayAwayScore}
-                  </div>
-                  {liveData?.isLive && (
-                    <span className="text-xs text-red-400 font-bold tracking-wide flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />
+            <div className="flex-shrink-0 mx-4 text-center min-w-[120px]">
+              {/* Status badge — above the score */}
+              {liveData?.statusText ? (
+                <div className="mb-2 flex justify-center">
+                  {liveData.isHalfTime ? (
+                    <span className="text-sm font-bold text-amber-400 bg-amber-500/10 border border-amber-500/25 px-3 py-1 rounded-full tracking-wide">
+                      HT
+                    </span>
+                  ) : liveData.isLive ? (
+                    <span className="flex items-center gap-1.5 text-sm font-bold text-red-400 bg-red-500/10 border border-red-500/25 px-3 py-1 rounded-full tracking-wide">
+                      <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse shrink-0" />
                       {liveData.statusText}
                     </span>
-                  )}
+                  ) : liveData.isFinished ? (
+                    <span className="text-sm font-bold text-slate-400 bg-white/5 border border-white/10 px-3 py-1 rounded-full tracking-wide">
+                      FT
+                    </span>
+                  ) : null}
+                </div>
+              ) : !displayHomeScore && match.scheduledAt ? (
+                /* Kickoff time when match hasn't started */
+                <div className="mb-2 text-xs text-slate-500 font-medium">
+                  {new Date(match.scheduledAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              ) : null}
+
+              {/* Score */}
+              {displayHomeScore != null && displayAwayScore != null ? (
+                <div
+                  className="font-score leading-none tracking-wider px-4 py-2 rounded-2xl"
+                  style={{
+                    fontSize: '52px',
+                    color: liveData?.isLive && !liveData.isHalfTime ? '#F87171' : '#F0F4FF',
+                    background: liveData?.isLive && !liveData.isHalfTime ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.04)',
+                    border: liveData?.isLive && !liveData.isHalfTime ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(255,255,255,0.06)',
+                  }}
+                >
+                  {displayHomeScore} – {displayAwayScore}
                 </div>
               ) : (
                 <div className="font-score text-3xl text-slate-600 tracking-widest px-4">VS</div>

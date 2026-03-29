@@ -198,37 +198,57 @@ async function fetchLeague(url: string, sport: Sport): Promise<Match[]> {
 export interface LiveMatchData {
   homeScore: number | null
   awayScore: number | null
-  isLive: boolean
+  isLive: boolean      // true while clock is running (includes HT)
+  isHalfTime: boolean
   isFinished: boolean
-  statusText: string
+  statusText: string   // e.g. "67'", "HT", "Q3 4:23", "FT"
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseEventLive(event: any): LiveMatchData {
+function parseEventLive(event: any, sport: Sport): LiveMatchData {
   const competition = event.competitions?.[0]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const home = competition?.competitors?.find((c: any) => c.homeAway === 'home')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const away = competition?.competitors?.find((c: any) => c.homeAway === 'away')
   const statusName: string = event.status?.type?.name ?? ''
-  const isLive = statusName === 'STATUS_IN_PROGRESS'
-  const isFinished = statusName === 'STATUS_FINAL'
   const clock: string = event.status?.displayClock ?? ''
   const period: number = event.status?.period ?? 0
 
-  let statusText = 'Scheduled'
-  if (isLive && clock) {
-    statusText = period >= 2 ? `2H ${clock}` : `${clock}'`
-  } else if (isLive) {
-    statusText = 'LIVE'
+  const isInProgress = statusName === 'STATUS_IN_PROGRESS'
+  const isHalfTime = statusName === 'STATUS_HALFTIME'
+  const isFinished = statusName === 'STATUS_FINAL'
+  const isLive = isInProgress || isHalfTime
+
+  let statusText = ''
+  if (isHalfTime) {
+    statusText = 'HT'
   } else if (isFinished) {
     statusText = 'FT'
+  } else if (isInProgress) {
+    if (sport === 'basketball') {
+      // period 1–4 = Q1–Q4, 5+ = OT
+      const label = period <= 4 ? `Q${period}` : period === 5 ? 'OT' : `OT${period - 4}`
+      statusText = clock ? `${label} ${clock}` : label
+    } else {
+      // Football: period 1 = 1st half, 2 = 2nd half, 3 = ET 1st, 4 = ET 2nd, 5 = pens
+      if (period >= 5) {
+        statusText = 'PENS'
+      } else if (period >= 3) {
+        statusText = clock ? `ET ${clock}'` : 'ET'
+      } else {
+        // displayClock for football is already the minute (e.g. "67:00" → trim seconds)
+        const minute = clock ? clock.replace(/:.*/, '') : ''
+        statusText = minute ? `${minute}'` : 'LIVE'
+      }
+    }
   }
 
   return {
     homeScore: home?.score != null ? Number(home.score) : null,
     awayScore: away?.score != null ? Number(away.score) : null,
     isLive,
+    isHalfTime,
     isFinished,
     statusText,
   }
@@ -246,7 +266,7 @@ export async function fetchMatchLiveData(match: Match): Promise<LiveMatchData | 
       const data = await res.json()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const event = (data.events ?? []).find((e: any) => e.id === eventId)
-      return event ? parseEventLive(event) : null
+      return event ? parseEventLive(event, 'basketball') : null
     } catch {
       return null
     }
@@ -267,7 +287,7 @@ export async function fetchMatchLiveData(match: Match): Promise<LiveMatchData | 
     }),
   )
   const event = results.find(Boolean)
-  return event ? parseEventLive(event) : null
+  return event ? parseEventLive(event, 'football') : null
 }
 
 export async function fetchTodayMatches(): Promise<{ football: Match[]; basketball: Match[] }> {
