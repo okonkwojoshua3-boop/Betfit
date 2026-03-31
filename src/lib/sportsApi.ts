@@ -294,20 +294,69 @@ function parseEventLive(event: any, sport: Sport): LiveMatchData {
   }
 }
 
-/** Try ESPN's summary endpoint which works for any competition by event ID. */
+/**
+ * Try ESPN's per-league summary endpoint for a specific event ID.
+ * The summary endpoint returns historical results for any event — unlike the
+ * scoreboard which may drop finished matches after a few days.
+ * We don't know which league the event belongs to, so we try the most common
+ * ones in parallel and take the first valid response.
+ */
+const SUMMARY_LEAGUES = [
+  'fifa.friendly',
+  'UEFA.Nations',
+  'uefa.nations',
+  'fifa.worldq.europe',
+  'fifa.worldq.conmebol',
+  'fifa.worldq.concacaf',
+  'fifa.worldq.afc',
+  'fifa.worldq.caf',
+  'UEFA.EURO',
+  'fifa.world',
+  'eng.1',
+  'esp.1',
+  'ger.1',
+  'ita.1',
+  'fra.1',
+  'ned.1',
+  'por.1',
+  'uefa.champions_league',
+  'uefa.europa',
+  'concacaf.gold',
+  'africa.nations',
+]
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseSummaryEvent(data: any, sport: Sport): LiveMatchData | null {
+  // Summary wraps the event under `header`; events endpoint returns it directly
+  const event = data?.header ?? data
+  if (!event?.competitions?.[0]?.competitors) return null
+  return parseEventLive(event, sport)
+}
+
 async function fetchEventViaSummary(eventId: string, sport: Sport): Promise<LiveMatchData | null> {
-  try {
-    const sportPath = sport === 'basketball' ? 'basketball/nba' : 'soccer'
-    const res = await fetch(`${ESPN_BASE}/${sportPath}/summary?event=${eventId}`)
-    if (!res.ok) return null
-    const data = await res.json()
-    // Summary response wraps the event under `header`
-    const event = data.header
-    if (!event?.competitions?.[0]?.competitors) return null
-    return parseEventLive(event, sport)
-  } catch {
-    return null
+  if (sport === 'basketball') {
+    try {
+      const res = await fetch(`${ESPN_BASE}/basketball/nba/summary?event=${eventId}`)
+      if (!res.ok) return null
+      return parseSummaryEvent(await res.json(), 'basketball')
+    } catch {
+      return null
+    }
   }
+
+  // Soccer: try all likely leagues in parallel — first valid result wins
+  const results = await Promise.all(
+    SUMMARY_LEAGUES.map(async (league) => {
+      try {
+        const res = await fetch(`${ESPN_BASE}/soccer/${league}/summary?event=${eventId}`)
+        if (!res.ok) return null
+        return parseSummaryEvent(await res.json(), 'football')
+      } catch {
+        return null
+      }
+    }),
+  )
+  return results.find(Boolean) ?? null
 }
 
 export async function fetchMatchLiveData(match: Match): Promise<LiveMatchData | null> {
@@ -315,10 +364,11 @@ export async function fetchMatchLiveData(match: Match): Promise<LiveMatchData | 
   const eventId = match.id.slice(5)
   const dateStr = match.scheduledAt.slice(0, 10).replace(/-/g, '')
 
-  // Try the league-agnostic summary endpoint first (works for any competition)
+  // Primary: per-league summary endpoint (works for past & live events in any competition)
   const fromSummary = await fetchEventViaSummary(eventId, match.sport)
   if (fromSummary) return fromSummary
 
+  // Fallback: scoreboard scan (better for live matches with real-time clock data)
   if (match.sport === 'basketball') {
     try {
       const res = await fetch(`${ESPN_BASE}/basketball/nba/scoreboard?dates=${dateStr}`)
@@ -332,7 +382,6 @@ export async function fetchMatchLiveData(match: Match): Promise<LiveMatchData | 
     }
   }
 
-  // Football: scan all leagues in parallel as fallback
   const results = await Promise.all(
     FOOTBALL_LEAGUES.map(async (league) => {
       try {
