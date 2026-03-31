@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Bet, Match, Sport } from '../../types'
 import { getMatchById } from '../../data/matches'
@@ -11,6 +12,43 @@ export default function BetCard({ bet }: { bet: Bet }) {
   const navigate = useNavigate()
   const storedMatch = getMatchById(bet.matchId)
   const punishment = getPunishmentById(bet.punishment.punishmentId)
+  const betSettled = bet.status === 'punishment_pending' || bet.status === 'completed'
+
+  // Stable match reference for useLiveScore — memoised by matchId (never changes for a given bet).
+  // getMatchById parses localStorage each render, returning a new object reference every time,
+  // which would reset the polling interval on every render without this memo.
+  const matchForLive = useMemo<Match | undefined>(() => {
+    const stored = getMatchById(bet.matchId)
+    return stored ?? (
+      bet.homeTeamId && bet.awayTeamId
+        ? {
+            id: bet.matchId,
+            sport: (bet.sport ?? 'football') as Sport,
+            homeTeam: {
+              id: bet.homeTeamId,
+              name: bet.homeTeamName ?? 'Home',
+              shortCode: (bet.homeTeamName ?? 'HOM').slice(0, 3).toUpperCase(),
+              badgeColor: '',
+              emoji: bet.homeTeamEmoji ?? '⚽',
+            },
+            awayTeam: {
+              id: bet.awayTeamId,
+              name: bet.awayTeamName ?? 'Away',
+              shortCode: (bet.awayTeamName ?? 'AWY').slice(0, 3).toUpperCase(),
+              badgeColor: '',
+              emoji: bet.awayTeamEmoji ?? '⚽',
+            },
+            scheduledAt: bet.matchScheduledAt ?? bet.createdAt,
+            status: 'upcoming',
+          }
+        : undefined
+    )
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bet.matchId])
+
+  // Must be called unconditionally before any early return (Rules of Hooks).
+  // BetCard doesn't settle bets — onFinished is a noop; BetDetail handles resolution.
+  const liveData = useLiveScore(matchForLive, betSettled, () => {})
 
   if (!punishment) return null
 
@@ -25,7 +63,6 @@ export default function BetCard({ bet }: { bet: Bet }) {
   const awayTeamId = storedMatch?.awayTeam.id ?? bet.awayTeamId ?? 'away'
   const scheduledAt = storedMatch?.scheduledAt ?? bet.matchScheduledAt ?? ''
   // Only use bet.homeScore/awayScore when the bet is settled — DB may default to 0 for unresolved bets
-  const betSettled = bet.status === 'punishment_pending' || bet.status === 'completed'
   const homeScore = betSettled
     ? (bet.homeScore ?? storedMatch?.result?.homeScore)
     : storedMatch?.result?.homeScore
@@ -33,35 +70,6 @@ export default function BetCard({ bet }: { bet: Bet }) {
     ? (bet.awayScore ?? storedMatch?.result?.awayScore)
     : storedMatch?.result?.awayScore
   const hasScore = homeScore != null && awayScore != null
-
-  // Build a match object for live polling — use storedMatch or synthesise from bet fields
-  const matchForLive: Match | undefined = storedMatch ?? (
-    bet.homeTeamId && bet.awayTeamId
-      ? {
-          id: bet.matchId,
-          sport: (bet.sport ?? 'football') as Sport,
-          homeTeam: {
-            id: bet.homeTeamId,
-            name: bet.homeTeamName ?? 'Home',
-            shortCode: (bet.homeTeamName ?? 'HOM').slice(0, 3).toUpperCase(),
-            badgeColor: '',
-            emoji: bet.homeTeamEmoji ?? '⚽',
-          },
-          awayTeam: {
-            id: bet.awayTeamId,
-            name: bet.awayTeamName ?? 'Away',
-            shortCode: (bet.awayTeamName ?? 'AWY').slice(0, 3).toUpperCase(),
-            badgeColor: '',
-            emoji: bet.awayTeamEmoji ?? '⚽',
-          },
-          scheduledAt: bet.matchScheduledAt ?? bet.createdAt,
-          status: 'upcoming',
-        }
-      : undefined
-  )
-
-  // BetCard doesn't settle bets — onFinished is a noop here; BetDetail handles resolution
-  const liveData = useLiveScore(matchForLive, betSettled, () => {})
 
   const isLive = liveData?.isLive ?? storedMatch?.status === 'live'
   let statusLabel: string | null = null
