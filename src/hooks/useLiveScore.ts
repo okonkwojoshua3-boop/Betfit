@@ -34,7 +34,7 @@ export function useLiveScore(
 
   useEffect(() => {
     if (!match || betResolved) return
-    if (!match.id.startsWith('espn-')) return
+    if (!match.id.startsWith('espn-') && !match.id.startsWith('allsports-')) return
 
     const kickoff = new Date(match.scheduledAt)
     const now = new Date()
