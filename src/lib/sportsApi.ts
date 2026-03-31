@@ -328,8 +328,12 @@ const SUMMARY_LEAGUES = [
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseSummaryEvent(data: any, sport: Sport): LiveMatchData | null {
   // Summary wraps the event under `header`; events endpoint returns it directly
-  const event = data?.header ?? data
-  if (!event?.competitions?.[0]?.competitors) return null
+  const header = data?.header ?? data
+  if (!header?.competitions?.[0]?.competitors) return null
+  // The summary endpoint nests status inside competitions[0], not at the header root.
+  // Normalise it to the top level so parseEventLive can find it at event.status.
+  const competition = header.competitions[0]
+  const event = { ...header, status: header.status ?? competition.status }
   return parseEventLive(event, sport)
 }
 
@@ -375,7 +379,7 @@ export async function fetchMatchLiveData(match: Match): Promise<LiveMatchData | 
       if (!res.ok) return null
       const data = await res.json()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const event = (data.events ?? []).find((e: any) => e.id === eventId)
+      const event = (data.events ?? []).find((e: any) => String(e.id) === eventId)
       return event ? parseEventLive(event, 'basketball') : null
     } catch {
       return null
@@ -389,7 +393,7 @@ export async function fetchMatchLiveData(match: Match): Promise<LiveMatchData | 
         if (!res.ok) return null
         const data = await res.json()
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (data.events ?? []).find((e: any) => e.id === eventId) ?? null
+        return (data.events ?? []).find((e: any) => String(e.id) === eventId) ?? null
       } catch {
         return null
       }
