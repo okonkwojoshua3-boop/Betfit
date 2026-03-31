@@ -62,13 +62,20 @@ export default function BetCard({ bet }: { bet: Bet }) {
   const homeTeamId = storedMatch?.homeTeam.id ?? bet.homeTeamId ?? 'home'
   const awayTeamId = storedMatch?.awayTeam.id ?? bet.awayTeamId ?? 'away'
   const scheduledAt = storedMatch?.scheduledAt ?? bet.matchScheduledAt ?? ''
-  // Only use bet.homeScore/awayScore when the bet is settled — DB may default to 0 for unresolved bets
-  const homeScore = betSettled
-    ? (bet.homeScore ?? storedMatch?.result?.homeScore)
-    : storedMatch?.result?.homeScore
-  const awayScore = betSettled
-    ? (bet.awayScore ?? storedMatch?.result?.awayScore)
-    : storedMatch?.result?.awayScore
+  // liveData scores come directly from ESPN — trusted for live and finished matches.
+  // For settled bets fall back to DB scores. Never use DB scores for unresolved bets
+  // (ESPN returns 0-0 for pre-match events and the DB defaults to 0).
+  const liveActive = liveData?.isLive || liveData?.isHalfTime || liveData?.isFinished
+  const homeScore = liveActive
+    ? (liveData?.homeScore ?? null)
+    : betSettled
+      ? (bet.homeScore ?? storedMatch?.result?.homeScore ?? null)
+      : null
+  const awayScore = liveActive
+    ? (liveData?.awayScore ?? null)
+    : betSettled
+      ? (bet.awayScore ?? storedMatch?.result?.awayScore ?? null)
+      : null
   const hasScore = homeScore != null && awayScore != null
 
   const isLive = liveData?.isLive ?? storedMatch?.status === 'live'

@@ -91,6 +91,8 @@ export function useBetStore(userId: string | undefined) {
               ...b,
               status: losingTeamId === 'draw' ? 'completed' : 'punishment_pending',
               losingTeamId,
+              homeScore: result.homeScore,
+              awayScore: result.awayScore,
               resolvedAt: new Date().toISOString(),
             }
           : b,
