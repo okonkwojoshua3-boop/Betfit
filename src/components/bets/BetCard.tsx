@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom'
-import type { Bet } from '../../types'
+import type { Bet, Match, Sport } from '../../types'
 import { getMatchById } from '../../data/matches'
 import { getPunishmentById } from '../../data/punishments'
+import { useLiveScore } from '../../hooks/useLiveScore'
 import Badge from '../ui/Badge'
 import SportIcon from '../ui/SportIcon'
 import TeamLogo from '../ui/TeamLogo'
@@ -33,12 +34,43 @@ export default function BetCard({ bet }: { bet: Bet }) {
     : storedMatch?.result?.awayScore
   const hasScore = homeScore != null && awayScore != null
 
+  // Build a match object for live polling — use storedMatch or synthesise from bet fields
+  const matchForLive: Match | undefined = storedMatch ?? (
+    bet.homeTeamId && bet.awayTeamId
+      ? {
+          id: bet.matchId,
+          sport: (bet.sport ?? 'football') as Sport,
+          homeTeam: {
+            id: bet.homeTeamId,
+            name: bet.homeTeamName ?? 'Home',
+            shortCode: (bet.homeTeamName ?? 'HOM').slice(0, 3).toUpperCase(),
+            badgeColor: '',
+            emoji: bet.homeTeamEmoji ?? '⚽',
+          },
+          awayTeam: {
+            id: bet.awayTeamId,
+            name: bet.awayTeamName ?? 'Away',
+            shortCode: (bet.awayTeamName ?? 'AWY').slice(0, 3).toUpperCase(),
+            badgeColor: '',
+            emoji: bet.awayTeamEmoji ?? '⚽',
+          },
+          scheduledAt: bet.matchScheduledAt ?? bet.createdAt,
+          status: 'upcoming',
+        }
+      : undefined
+  )
+
+  // BetCard doesn't settle bets — onFinished is a noop here; BetDetail handles resolution
+  const liveData = useLiveScore(matchForLive, betSettled, () => {})
+
+  const isLive = liveData?.isLive ?? storedMatch?.status === 'live'
   let statusLabel: string | null = null
-  const isLive = storedMatch?.status === 'live'
-  if (isLive) {
-    statusLabel = storedMatch?.statusText ?? 'LIVE'
-  } else if (hasScore || storedMatch?.status === 'finished') {
-    statusLabel = storedMatch?.statusText ?? 'FT'
+  if (liveData?.isLive) {
+    statusLabel = liveData.statusText
+  } else if (liveData?.isFinished || hasScore || storedMatch?.status === 'finished') {
+    statusLabel = liveData?.statusText ?? storedMatch?.statusText ?? 'FT'
+  } else if (storedMatch?.status === 'live') {
+    statusLabel = storedMatch.statusText ?? 'LIVE'
   } else if (scheduledAt) {
     const kickoff = new Date(scheduledAt)
     if (kickoff > new Date()) {
