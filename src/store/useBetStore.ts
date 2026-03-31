@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import type { Bet, Match, MatchResult } from '../types'
 import { resolveLosingTeam } from '../lib/betEngine'
 import { supabase } from '../lib/supabase'
+import { getPunishmentById, formatPunishment } from '../data/punishments'
+import { createNotification } from '../services/notificationService'
 import {
   fetchBets,
   createBet as dbCreateBet,
@@ -60,6 +62,28 @@ export function useBetStore(userId: string | undefined) {
   const resolveBet = useCallback(async (betId: string, result: MatchResult, match: Match) => {
     const losingTeamId = resolveLosingTeam(match, result)
     await dbResolveBet(betId, result, losingTeamId)
+
+    // Notify all participants about the outcome
+    const bet = bets.find((b) => b.id === betId)
+    if (bet?.participants?.length && losingTeamId !== 'draw') {
+      const punishment = getPunishmentById(bet.punishment.punishmentId)
+      const punishmentText = punishment
+        ? formatPunishment(punishment, bet.punishment.reps)
+        : `${bet.punishment.reps} reps`
+      for (const p of bet.participants) {
+        const isLoser = p.teamPickId === losingTeamId
+        createNotification(
+          p.userId,
+          betId,
+          isLoser
+            ? `😬 You lost! Complete ${punishmentText} and upload your proof.`
+            : `🎉 You won! Waiting for the losers to submit proof.`,
+          isLoser ? p.username : '',
+          isLoser ? punishmentText : '',
+        ).catch(console.error)
+      }
+    }
+
     setBets((prev) =>
       prev.map((b) =>
         b.id === betId
@@ -72,7 +96,7 @@ export function useBetStore(userId: string | undefined) {
           : b,
       ),
     )
-  }, [])
+  }, [bets])
 
   const acknowledgePunishment = useCallback(async (betId: string) => {
     await dbCompleteBet(betId)

@@ -213,6 +213,130 @@ function ProofSection({
   )
 }
 
+// ── Winner proof review ────────────────────────────────────────────────────────
+function WinnerProofReview({
+  betId,
+  loserNames,
+  onApproved,
+}: {
+  betId: string
+  loserNames: string
+  onApproved: () => void
+}) {
+  const { proof, approveProof, rejectProof } = useProof(betId)
+  const [rejectNote, setRejectNote] = useState('')
+  const [showRejectInput, setShowRejectInput] = useState(false)
+
+  function handleApprove() {
+    approveProof()
+    onApproved()
+  }
+
+  function handleReject() {
+    if (!rejectNote.trim()) return
+    rejectProof(rejectNote.trim())
+    setShowRejectInput(false)
+    setRejectNote('')
+  }
+
+  if (!proof?.fileUrl) {
+    return (
+      <div
+        className="rounded-2xl p-5"
+        style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xl">⏳</span>
+          <h3 className="font-bold text-white">Awaiting Proof</h3>
+        </div>
+        <p className="text-sm text-slate-400">
+          Waiting for <span className="text-red-400 font-semibold">{loserNames}</span> to upload their proof.
+        </p>
+      </div>
+    )
+  }
+
+  if (proof.status === 'approved') {
+    return (
+      <div
+        className="rounded-2xl p-5"
+        style={{ background: 'rgba(34,214,114,0.05)', border: '1px solid rgba(34,214,114,0.2)' }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-xl">✅</span>
+          <h3 className="font-bold text-neon-green">Proof Approved</h3>
+        </div>
+        <p className="text-sm text-slate-400 mt-1">{loserNames} completed their punishment.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-slate-800 border border-emerald-500/20 rounded-2xl p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xl">🔍</span>
+        <h3 className="font-bold text-white">Review Proof</h3>
+        <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full ml-auto">
+          Awaiting approval
+        </span>
+      </div>
+      <img src={proof.fileUrl} alt="Punishment proof" className="w-full rounded-xl mb-3 object-cover max-h-72" />
+      <p className="text-xs text-slate-500 mb-4">
+        Uploaded{' '}
+        {new Date(proof.uploadedAt).toLocaleString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+      </p>
+      {!showRejectInput ? (
+        <div className="flex gap-2">
+          <button
+            onClick={handleApprove}
+            className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-3 rounded-xl transition-colors"
+          >
+            ✅ Approve
+          </button>
+          <button
+            onClick={() => setShowRejectInput(true)}
+            className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-3 rounded-xl transition-colors border border-slate-600"
+          >
+            ❌ Reject
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={rejectNote}
+            onChange={(e) => setRejectNote(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleReject()}
+            placeholder="Reason for rejection..."
+            autoFocus
+            className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setShowRejectInput(false); setRejectNote('') }}
+              className="flex-1 bg-slate-700 text-slate-300 font-medium py-2.5 rounded-xl text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleReject}
+              disabled={!rejectNote.trim()}
+              className="flex-1 bg-red-500 hover:bg-red-400 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+            >
+              Confirm Reject
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main BetDetail page ───────────────────────────────────────────────────────
 export default function BetDetail() {
   const { id } = useParams<{ id: string }>()
@@ -275,8 +399,8 @@ export default function BetDetail() {
       : null
 
   // Show punishment banner on first visit when resolved
-  if (bet.status === 'punishment_pending' && losingTeamId && !isDraw && showBanner) {
-    return <PunishmentBanner bet={bet} onDone={() => setShowBanner(false)} />
+  if (bet.status === 'punishment_pending' && currentUserIsLoser && showBanner) {
+    return <PunishmentBanner bet={bet} match={match} punishmentText={punishmentText} onDone={() => setShowBanner(false)} />
   }
 
   return (
@@ -452,6 +576,17 @@ export default function BetDetail() {
             betId={bet.id}
             loserName={currentUserParticipant.username}
             punishmentText={punishmentText}
+            onApproved={() => acknowledgePunishment(bet.id)}
+          />
+        </div>
+      )}
+
+      {/* Proof review for winners */}
+      {bet.status === 'punishment_pending' && !currentUserIsLoser && !isDraw && (
+        <div className="mb-4">
+          <WinnerProofReview
+            betId={bet.id}
+            loserNames={loserNames}
             onApproved={() => acknowledgePunishment(bet.id)}
           />
         </div>
