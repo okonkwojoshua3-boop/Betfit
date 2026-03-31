@@ -9,7 +9,7 @@ import { useLiveScore } from '../hooks/useLiveScore'
 import PunishmentBanner from '../components/bets/PunishmentBanner'
 import Badge from '../components/ui/Badge'
 import SportIcon from '../components/ui/SportIcon'
-import type { Bet, Match } from '../types'
+import type { Bet, Match, MatchResult } from '../types'
 import type { LiveMatchData } from '../lib/sportsApi'
 import TeamLogo from '../components/ui/TeamLogo'
 
@@ -70,6 +70,79 @@ function MatchStatusBadge({ match, liveData }: { match: Match; liveData: LiveMat
     )
   }
   return <span className="text-xs text-slate-500 italic">Awaiting result</span>
+}
+
+// ── Manual result entry (fallback when ESPN can't find the match) ─────────────
+function ManualResultEntry({ match, onSubmit }: { match: Match; onSubmit: (result: MatchResult) => void }) {
+  const [homeScore, setHomeScore] = useState('')
+  const [awayScore, setAwayScore] = useState('')
+  const matchPassed = new Date(match.scheduledAt) < new Date()
+
+  if (!matchPassed) {
+    return (
+      <div
+        className="rounded-xl px-4 py-3 text-center text-sm text-slate-600 animate-fade-up animate-fill-both animate-delay-200"
+        style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
+      >
+        Scores update automatically every 45s once the match starts
+      </div>
+    )
+  }
+
+  function handleSubmit() {
+    const h = parseInt(homeScore, 10)
+    const a = parseInt(awayScore, 10)
+    if (isNaN(h) || isNaN(a) || h < 0 || a < 0) return
+    const winnerId = h > a ? match.homeTeam.id : a > h ? match.awayTeam.id : 'draw'
+    onSubmit({ winnerId, homeScore: h, awayScore: a })
+  }
+
+  return (
+    <div
+      className="rounded-2xl p-5 animate-fade-up animate-fill-both animate-delay-200"
+      style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.2)' }}
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-lg">⚽</span>
+        <h3 className="font-bold text-white text-sm">Match ended — enter the final score</h3>
+      </div>
+      <p className="text-xs text-slate-500 mb-4">Live scores weren't available for this match. Enter the result manually to settle the bet.</p>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex-1 text-center">
+          <div className="text-xs text-slate-500 mb-1 truncate">{match.homeTeam.name}</div>
+          <input
+            type="number"
+            min="0"
+            max="99"
+            value={homeScore}
+            onChange={(e) => setHomeScore(e.target.value)}
+            placeholder="0"
+            className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-3 text-white text-center text-2xl font-bold focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all"
+          />
+        </div>
+        <span className="text-slate-600 font-bold text-lg">–</span>
+        <div className="flex-1 text-center">
+          <div className="text-xs text-slate-500 mb-1 truncate">{match.awayTeam.name}</div>
+          <input
+            type="number"
+            min="0"
+            max="99"
+            value={awayScore}
+            onChange={(e) => setAwayScore(e.target.value)}
+            placeholder="0"
+            className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-3 text-white text-center text-2xl font-bold focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all"
+          />
+        </div>
+      </div>
+      <button
+        onClick={handleSubmit}
+        disabled={homeScore === '' || awayScore === ''}
+        className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-black font-bold py-3 rounded-xl transition-colors text-sm"
+      >
+        Settle Bet
+      </button>
+    </div>
+  )
 }
 
 // ── Proof section ─────────────────────────────────────────────────────────────
@@ -457,14 +530,12 @@ export default function BetDetail() {
         </div>
       )}
 
-      {/* Waiting for result */}
+      {/* Waiting for result / manual entry fallback */}
       {bet.status === 'active' && !liveData?.isLive && !liveData?.isFinished && (
-        <div
-          className="rounded-xl px-4 py-3 text-center text-sm text-slate-600 animate-fade-up animate-fill-both animate-delay-200"
-          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
-        >
-          Scores update automatically every 45s once the match starts
-        </div>
+        <ManualResultEntry
+          match={match}
+          onSubmit={(result) => { if (id) resolveBet(id, result, match) }}
+        />
       )}
 
       {/* Completed */}

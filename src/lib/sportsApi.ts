@@ -19,11 +19,26 @@ const FOOTBALL_LEAGUES = [
   'uefa.europa',
   'uefa.europa.conf',
   // International / National Teams
-  'fifa.friendly',  // International friendlies
-  'UEFA.Nations',   // UEFA Nations League
-  'UEFA.EURO',      // UEFA Euros
-  'fifa.world',     // FIFA World Cup
-  'conmebol.america', // Copa America
+  'fifa.friendly',         // International friendlies
+  'UEFA.Nations',          // UEFA Nations League (ESPN format 1)
+  'uefa.nations',          // UEFA Nations League (ESPN format 2)
+  'UEFA.EURO',             // UEFA Euros
+  'fifa.world',            // FIFA World Cup (finals)
+  'fifa.worldq.europe',    // FIFA World Cup – UEFA qualifiers
+  'fifa.worldq.conmebol',  // FIFA World Cup – CONMEBOL qualifiers
+  'fifa.worldq.concacaf',  // FIFA World Cup – CONCACAF qualifiers
+  'fifa.worldq.afc',       // FIFA World Cup – AFC qualifiers
+  'fifa.worldq.caf',       // FIFA World Cup – CAF qualifiers
+  'conmebol.america',      // Copa America
+  'concacaf.gold',         // CONCACAF Gold Cup
+  'afc.cup',               // AFC Asian Cup
+  'africa.nations',        // Africa Cup of Nations
+  'UEFA.UECL',             // UEFA Conference League
+  'eng.fa_cup',            // FA Cup
+  'ger.dfb_pokal',         // DFB Pokal
+  'esp.copa_del_rey',      // Copa del Rey
+  'ita.coppa_italia',      // Coppa Italia
+  'fra.coupe_de_france',   // Coupe de France
 ]
 
 const TEAM_META: Record<string, { emoji: string; badgeColor: string }> = {
