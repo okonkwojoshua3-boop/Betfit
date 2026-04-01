@@ -413,6 +413,47 @@ function espnParseSummaryEvent(data: any, sport: Sport): LiveMatchData | null {
   return espnParseEventLive(event, sport)
 }
 
+// AllSports fallback: find a past or live match by team names + date
+// Used when ESPN summary/scoreboard fails to locate an espn- bet's result.
+async function fetchAllSportsByTeamNames(
+  homeName: string,
+  awayName: string,
+  dateStr: string, // YYYY-MM-DD
+  sport: Sport,
+): Promise<LiveMatchData | null> {
+  const sportSlug = sport === 'basketball' ? 'basketball' : 'football'
+  try {
+    const res = await fetch(
+      `${ALLSPORTS_BASE}/api/sport/${sportSlug}/scheduled-events/${dateStr}`,
+      { headers: allSportsHeaders() },
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const events: any[] = data.events ?? []
+
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '')
+    const homeNorm = normalize(homeName)
+    const awayNorm = normalize(awayName)
+
+    // Fuzzy match: names share a 4-char prefix, or one contains the other
+    const nameMatch = (a: string, b: string) => {
+      if (!a || !b) return false
+      return a.includes(b) || b.includes(a) || (a.length >= 4 && b.startsWith(a.slice(0, 4))) || (b.length >= 4 && a.startsWith(b.slice(0, 4)))
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const event = events.find((e: any) => {
+      const hn = normalize(e.homeTeam?.name ?? '')
+      const an = normalize(e.awayTeam?.name ?? '')
+      return nameMatch(hn, homeNorm) && nameMatch(an, awayNorm)
+    })
+
+    if (!event) return null
+    return parseAllSportsLive(event, sport)
+  } catch { return null }
+}
+
 async function fetchMatchLiveDataEspn(match: Match): Promise<LiveMatchData | null> {
   const eventId = match.id.slice(5) // strip "espn-"
   const dateStr = match.scheduledAt.slice(0, 10).replace(/-/g, '')
@@ -464,5 +505,11 @@ async function fetchMatchLiveDataEspn(match: Match): Promise<LiveMatchData | nul
     }),
   )
   const event = results.find(Boolean)
-  return event ? espnParseEventLive(event, 'football') : null
+  if (event) return espnParseEventLive(event, 'football')
+
+  // Last resort: AllSports date-based search by team names
+  // ESPN event IDs and league paths are unreliable for international friendlies/qualifiers;
+  // AllSports has broader coverage and returns finished match scores.
+  const matchDate = match.scheduledAt.slice(0, 10) // YYYY-MM-DD
+  return fetchAllSportsByTeamNames(match.homeTeam.name, match.awayTeam.name, matchDate, match.sport)
 }
