@@ -288,9 +288,18 @@ export async function fetchTodayMatches(): Promise<{ football: Match[]; basketba
   ])
   const notAlreadyLive = (m: Match) => !liveKeys.has(`${m.homeTeam.name}|${m.awayTeam.name}`)
 
+  const byKickoff = (a: Match, b: Match) =>
+    new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
+
   return {
-    football:   [...allSportsLive.football,   ...espnToday.football.filter(notAlreadyLive)],
-    basketball: [...allSportsLive.basketball, ...espnToday.basketball.filter(notAlreadyLive)],
+    football: [
+      ...allSportsLive.football,
+      ...espnToday.football.filter(notAlreadyLive).sort(byKickoff),
+    ],
+    basketball: [
+      ...allSportsLive.basketball,
+      ...espnToday.basketball.filter(notAlreadyLive).sort(byKickoff),
+    ],
   }
 }
 

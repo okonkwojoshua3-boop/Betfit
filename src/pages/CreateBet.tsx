@@ -367,8 +367,9 @@ export default function CreateBet() {
               {filteredMatches.length === 0 ? (
                 <div className="text-center py-10 text-slate-500 text-sm">No matches found for today.</div>
               ) : (() => {
-                const liveNow    = filteredMatches.filter(m => m.status === 'live')
-                const upcoming   = filteredMatches.filter(m => m.status !== 'live')
+                const byKickoff  = (a: Match, b: Match) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
+                const liveNow    = filteredMatches.filter(m => m.status === 'live').sort(byKickoff)
+                const upcoming   = filteredMatches.filter(m => m.status !== 'live').sort(byKickoff)
                 const MatchCard = (match: typeof filteredMatches[0]) => (
                   <button
                     key={match.id}
