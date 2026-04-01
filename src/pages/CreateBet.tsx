@@ -50,6 +50,8 @@ export default function CreateBet() {
   const [searching, setSearching] = useState(false)
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [notifiedOpponent, setNotifiedOpponent] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!opponentQuery.trim() || selectedOpponent) {
@@ -102,44 +104,53 @@ export default function CreateBet() {
   }
 
   async function handleCreate() {
-    if (!selectedMatch || !profile) return
-    if (selectedMatch) saveMatch(selectedMatch)
+    if (!selectedMatch || !profile || creating) return
+    setCreating(true)
+    setCreateError(null)
+    try {
+      if (selectedMatch) saveMatch(selectedMatch)
 
-    const created = await addBet({
-      matchId: state.selectedMatchId,
-      creatorId: profile.id,
-      creator: { name: profile.username, teamPickId: state.creatorPickId },
-      opponent: { name: '' },
-      punishment: { punishmentId: state.punishmentId, reps: state.punishmentReps },
-      status: 'pending',
-      opponentId: selectedOpponent?.id,
-      sport: selectedMatch.sport,
-      matchScheduledAt: selectedMatch.scheduledAt,
-      homeTeamName: selectedMatch.homeTeam.name,
-      awayTeamName: selectedMatch.awayTeam.name,
-      homeTeamEmoji: selectedMatch.homeTeam.emoji,
-      awayTeamEmoji: selectedMatch.awayTeam.emoji,
-      homeTeamId: selectedMatch.homeTeam.id,
-      awayTeamId: selectedMatch.awayTeam.id,
-      homeTeamLogo: selectedMatch.homeTeam.logo,
-      awayTeamLogo: selectedMatch.awayTeam.logo,
-    })
+      const created = await addBet({
+        matchId: state.selectedMatchId,
+        creatorId: profile.id,
+        creator: { name: profile.username, teamPickId: state.creatorPickId },
+        opponent: { name: '' },
+        punishment: { punishmentId: state.punishmentId, reps: state.punishmentReps },
+        status: 'pending',
+        opponentId: selectedOpponent?.id,
+        sport: selectedMatch.sport,
+        matchScheduledAt: selectedMatch.scheduledAt,
+        homeTeamName: selectedMatch.homeTeam.name,
+        awayTeamName: selectedMatch.awayTeam.name,
+        homeTeamEmoji: selectedMatch.homeTeam.emoji,
+        awayTeamEmoji: selectedMatch.awayTeam.emoji,
+        homeTeamId: selectedMatch.homeTeam.id,
+        awayTeamId: selectedMatch.awayTeam.id,
+        homeTeamLogo: selectedMatch.homeTeam.logo,
+        awayTeamLogo: selectedMatch.awayTeam.logo,
+      })
 
-    if (created.inviteToken) {
-      const link = `${window.location.origin}/invite/${created.inviteToken}`
-      setInviteLink(link)
-      if (selectedOpponent) {
-        createNotification(
-          selectedOpponent.id,
-          created.id,
-          `${profile.username} challenged you to a bet! Click to accept.`,
-          '',
-          '',
-        ).catch(console.error)
-        setNotifiedOpponent(true)
+      if (created.inviteToken) {
+        const link = `${window.location.origin}/invite/${created.inviteToken}`
+        setInviteLink(link)
+        if (selectedOpponent) {
+          createNotification(
+            selectedOpponent.id,
+            created.id,
+            `${profile.username} challenged you to a bet! Click to accept.`,
+            '',
+            '',
+          ).catch(console.error)
+          setNotifiedOpponent(true)
+        }
+      } else {
+        navigate(`/bets/${created.id}`)
       }
-    } else {
-      navigate('/dashboard')
+    } catch (err) {
+      console.error('Failed to create bet:', err)
+      setCreateError(err instanceof Error ? err.message : 'Failed to create bet. Please try again.')
+    } finally {
+      setCreating(false)
     }
   }
 
@@ -536,7 +547,12 @@ export default function CreateBet() {
       )}
 
       {/* Navigation */}
-      <div className="flex gap-3 mt-8">
+      {createError && (
+        <div className="mt-4 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">
+          {createError}
+        </div>
+      )}
+      <div className="flex gap-3 mt-4">
         {step > 1 && (
           <button
             onClick={() => setStep((s) => (s - 1) as Step)}
@@ -556,10 +572,10 @@ export default function CreateBet() {
         ) : (
           <button
             onClick={handleCreate}
-            disabled={!canNext()}
+            disabled={!canNext() || creating}
             className="flex-1 bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-xl transition-colors"
           >
-            🏆 Create & Get Link
+            {creating ? 'Creating…' : '🏆 Create & Get Link'}
           </button>
         )}
       </div>
