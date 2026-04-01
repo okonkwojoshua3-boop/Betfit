@@ -184,8 +184,8 @@ function espnMapEvent(event: any, sport: Sport): Match | null {
     if (!home || !away) return null
     const statusName: string = event.status?.type?.name ?? ''
     let status: MatchStatus = 'upcoming'
-    if (statusName === 'STATUS_FINAL') status = 'finished'
-    else if (statusName === 'STATUS_IN_PROGRESS' || statusName === 'STATUS_HALFTIME') status = 'live'
+    if (statusName === 'STATUS_FINAL' || statusName === 'STATUS_FULL_TIME') status = 'finished'
+    else if (statusName === 'STATUS_IN_PROGRESS' || statusName === 'STATUS_HALFTIME' || statusName === 'STATUS_HALF_TIME') status = 'live'
     return {
       id: `espn-${event.id}`,
       sport,
@@ -371,8 +371,9 @@ function espnParseEventLive(event: any, sport: Sport): LiveMatchData {
   const clock: string  = event.status?.displayClock ?? ''
   const period: number = event.status?.period ?? 0
 
-  const isHalfTime = statusName === 'STATUS_HALFTIME'
-  const isFinished = statusName === 'STATUS_FINAL'
+  const isHalfTime = statusName === 'STATUS_HALFTIME' || statusName === 'STATUS_HALF_TIME'
+  // ESPN uses STATUS_FINAL for domestic leagues, STATUS_FULL_TIME for international/friendlies
+  const isFinished = statusName === 'STATUS_FINAL' || statusName === 'STATUS_FULL_TIME'
   const isLive     = statusName === 'STATUS_IN_PROGRESS' || isHalfTime
 
   let statusText = ''
