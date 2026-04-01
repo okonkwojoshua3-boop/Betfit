@@ -158,31 +158,68 @@ export interface LiveMatchData {
   statusText: string       // "67'", "HT", "Q3 4:23", "FT"
 }
 
-// ── fetchTodayMatches — AllSports live feed ───────────────────────────────────
+// ── fetchTodayMatches — AllSports live + today's scheduled ───────────────────
 export async function fetchTodayMatches(): Promise<{ football: Match[]; basketball: Match[] }> {
-  try {
-    const res = await fetch(`${ALLSPORTS_BASE}/api/matches/live`, {
-      headers: allSportsHeaders(),
-    })
-    if (!res.ok) return { football: [], basketball: [] }
-    const data = await res.json()
-    const events: unknown[] = data.events ?? []
+  const now = new Date()
+  const dd   = String(now.getDate()).padStart(2, '0')
+  const mm   = String(now.getMonth() + 1).padStart(2, '0')
+  const yyyy = now.getFullYear()
+  const dateParam = `${dd}.${mm}.${yyyy}` // AllSports date format: DD.MM.YYYY
 
-    const football: Match[] = []
-    const basketball: Match[] = []
-
-    for (const e of events) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const ev = e as any
-      const sportSlug: string = ev.tournament?.category?.sport?.slug ?? ''
-      if (sportSlug === 'football') football.push(mapAllSportsEvent(ev, 'football'))
-      else if (sportSlug === 'basketball') basketball.push(mapAllSportsEvent(ev, 'basketball'))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function fetchEvents(url: string): Promise<any[]> {
+    try {
+      const res = await fetch(url, { headers: allSportsHeaders() })
+      if (!res.ok) return []
+      const data = await res.json()
+      return data.events ?? []
+    } catch {
+      return []
     }
-
-    return { football, basketball }
-  } catch {
-    return { football: [], basketball: [] }
   }
+
+  const [liveEvents, footballEvents, basketballEvents] = await Promise.all([
+    fetchEvents(`${ALLSPORTS_BASE}/api/matches/live`),
+    fetchEvents(`${ALLSPORTS_BASE}/api/football/${dateParam}/matches`),
+    fetchEvents(`${ALLSPORTS_BASE}/api/basketball/${dateParam}/matches`),
+  ])
+
+  const football: Match[]  = []
+  const basketball: Match[] = []
+  const seen = new Set<number>()
+
+  // Live events first — they carry real-time score/status data
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const ev of liveEvents as any[]) {
+    const sportSlug: string = ev.tournament?.category?.sport?.slug ?? ''
+    if (sportSlug === 'football') {
+      seen.add(ev.id)
+      football.push(mapAllSportsEvent(ev, 'football'))
+    } else if (sportSlug === 'basketball') {
+      seen.add(ev.id)
+      basketball.push(mapAllSportsEvent(ev, 'basketball'))
+    }
+  }
+
+  // Today's scheduled football — skip already-seen (live) and finished matches
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const ev of footballEvents as any[]) {
+    if (seen.has(ev.id)) continue
+    if ((ev.status?.type ?? '') === 'finished') continue
+    seen.add(ev.id)
+    football.push(mapAllSportsEvent(ev, 'football'))
+  }
+
+  // Today's scheduled basketball — same dedup/filter
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const ev of basketballEvents as any[]) {
+    if (seen.has(ev.id)) continue
+    if ((ev.status?.type ?? '') === 'finished') continue
+    seen.add(ev.id)
+    basketball.push(mapAllSportsEvent(ev, 'basketball'))
+  }
+
+  return { football, basketball }
 }
 
 // ── fetchMatchLiveData ────────────────────────────────────────────────────────
