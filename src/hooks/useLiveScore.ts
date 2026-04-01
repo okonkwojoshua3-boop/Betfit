@@ -15,12 +15,13 @@ export function useLiveScore(
   onFinishedRef.current = onFinished
 
   const poll = useCallback(async () => {
-    if (!match || betResolved) return
+    if (!match) return
     const data = await fetchMatchLiveData(match)
     if (!data) return
     setLiveData(data)
 
-    if (data.isFinished && !data.isHalfTime && !resolvedRef.current && data.homeScore != null && data.awayScore != null) {
+    // Only trigger resolution callback if bet isn't already settled
+    if (!betResolved && data.isFinished && !data.isHalfTime && !resolvedRef.current && data.homeScore != null && data.awayScore != null) {
       resolvedRef.current = true
       const winnerId =
         data.homeScore > data.awayScore
@@ -33,8 +34,14 @@ export function useLiveScore(
   }, [match, betResolved])
 
   useEffect(() => {
-    if (!match || betResolved) return
+    if (!match) return
     if (!match.id.startsWith('espn-') && !match.id.startsWith('allsports-')) return
+
+    if (betResolved) {
+      // Settled bet: one-time fetch to display the final score — no polling needed
+      poll()
+      return
+    }
 
     const kickoff = new Date(match.scheduledAt)
     const now = new Date()
