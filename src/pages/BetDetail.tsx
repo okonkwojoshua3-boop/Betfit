@@ -6,12 +6,31 @@ import { getMatchById } from '../data/matches'
 import { getPunishmentById, formatPunishment } from '../data/punishments'
 import { useProof } from '../hooks/useProof'
 import { useLiveScore } from '../hooks/useLiveScore'
+import { createNotification } from '../services/notificationService'
 import PunishmentBanner from '../components/bets/PunishmentBanner'
 import Badge from '../components/ui/Badge'
 import SportIcon from '../components/ui/SportIcon'
 import type { Bet, Match } from '../types'
 import type { LiveMatchData } from '../lib/sportsApi'
 import TeamLogo from '../components/ui/TeamLogo'
+
+function isVideoUrl(url: string): boolean {
+  return /\.(mp4|mov|webm|avi|mkv|m4v|ogv)(\?|$)/i.test(url)
+}
+
+function ProofMedia({ url, alt }: { url: string; alt: string }) {
+  if (isVideoUrl(url)) {
+    return (
+      <video
+        src={url}
+        controls
+        playsInline
+        className="w-full rounded-xl mb-3 object-cover max-h-72"
+      />
+    )
+  }
+  return <img src={url} alt={alt} className="w-full rounded-xl mb-3 object-cover max-h-72" />
+}
 
 /** Build a synthetic Match from stored bet fields when localStorage doesn't have it (e.g. opponent's device). */
 function matchFromBet(bet: Bet): Match | undefined {
@@ -77,34 +96,18 @@ function ProofSection({
   betId,
   loserName,
   punishmentText,
-  onApproved,
 }: {
   betId: string
   loserName: string
   punishmentText: string
-  onApproved: () => void
 }) {
-  const { proof, uploading, uploadProof, approveProof, rejectProof, clearProof } = useProof(betId)
+  const { proof, uploading, uploadProof, clearProof } = useProof(betId)
   const fileRef = useRef<HTMLInputElement>(null)
-  const [rejectNote, setRejectNote] = useState('')
-  const [showRejectInput, setShowRejectInput] = useState(false)
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     uploadProof(file)
-  }
-
-  function handleApprove() {
-    approveProof()
-    onApproved()
-  }
-
-  function handleReject() {
-    if (!rejectNote.trim()) return
-    rejectProof(rejectNote.trim())
-    setShowRejectInput(false)
-    setRejectNote('')
   }
 
   if (!proof || !proof.fileUrl) {
@@ -118,15 +121,15 @@ function ProofSection({
           <span className="text-amber-400 font-semibold">{loserName}</span> — take a photo showing you completed{' '}
           <span className="text-white font-semibold">{punishmentText}</span>.
         </p>
-        <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+        <input ref={fileRef} type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={handleFileChange} />
         <button
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
           className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-black font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
         >
-          {uploading ? 'Uploading…' : '📷 Choose / Take Photo'}
+          {uploading ? 'Uploading…' : '📷 Choose Photo or Video'}
         </button>
-        <p className="text-xs text-slate-600 text-center mt-2">Photos only · Stored securely.</p>
+        <p className="text-xs text-slate-600 text-center mt-2">Photo or video · Stored securely.</p>
       </div>
     )
   }
@@ -143,11 +146,11 @@ function ProofSection({
             "{proof.rejectionNote}"
           </p>
         )}
-        <img src={proof.fileUrl} alt="Rejected proof" className="w-full rounded-xl mb-4 opacity-40 grayscale" />
+        <div className="opacity-40 grayscale mb-4"><ProofMedia url={proof.fileUrl} alt="Rejected proof" /></div>
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept="image/*,video/*"
           capture="environment"
           className="hidden"
           onChange={(e) => { clearProof(); handleFileChange(e) }}
@@ -165,50 +168,17 @@ function ProofSection({
   return (
     <div className="bg-slate-800 border border-emerald-500/20 rounded-2xl p-5">
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-xl">🔍</span>
-        <h3 className="font-bold text-white">Review Proof</h3>
+        <span className="text-xl">📤</span>
+        <h3 className="font-bold text-white">Proof Submitted</h3>
         <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full ml-auto">
           Awaiting approval
         </span>
       </div>
-      <img src={proof.fileUrl} alt="Punishment proof" className="w-full rounded-xl mb-3 object-cover max-h-72" />
-      <p className="text-xs text-slate-500 mb-4">
+      <ProofMedia url={proof.fileUrl} alt="Punishment proof" />
+      <p className="text-xs text-slate-500">
         Uploaded {new Date(proof.uploadedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
       </p>
-      {!showRejectInput ? (
-        <div className="flex gap-2">
-          <button onClick={handleApprove} className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-3 rounded-xl transition-colors">
-            ✅ Approve
-          </button>
-          <button onClick={() => setShowRejectInput(true)} className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-3 rounded-xl transition-colors border border-slate-600">
-            ❌ Reject
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <input
-            type="text"
-            value={rejectNote}
-            onChange={(e) => setRejectNote(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleReject()}
-            placeholder="Reason for rejection..."
-            autoFocus
-            className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all"
-          />
-          <div className="flex gap-2">
-            <button onClick={() => { setShowRejectInput(false); setRejectNote('') }} className="flex-1 bg-slate-700 text-slate-300 font-medium py-2.5 rounded-xl text-sm">
-              Cancel
-            </button>
-            <button
-              onClick={handleReject}
-              disabled={!rejectNote.trim()}
-              className="flex-1 bg-red-500 hover:bg-red-400 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
-            >
-              Confirm Reject
-            </button>
-          </div>
-        </div>
-      )}
+      <p className="text-xs text-slate-600 mt-2 text-center">Waiting for your opponent to review this.</p>
     </div>
   )
 }
@@ -217,10 +187,14 @@ function ProofSection({
 function WinnerProofReview({
   betId,
   loserNames,
+  loserUserIds,
+  punishmentText,
   onApproved,
 }: {
   betId: string
   loserNames: string
+  loserUserIds: string[]
+  punishmentText: string
   onApproved: () => void
 }) {
   const { proof, approveProof, rejectProof } = useProof(betId)
@@ -232,9 +206,19 @@ function WinnerProofReview({
     onApproved()
   }
 
-  function handleReject() {
+  async function handleReject() {
     if (!rejectNote.trim()) return
-    rejectProof(rejectNote.trim())
+    await rejectProof(rejectNote.trim())
+    // Notify each loser that their proof was rejected
+    for (const uid of loserUserIds) {
+      createNotification(
+        uid,
+        betId,
+        `Your proof was rejected: "${rejectNote.trim()}". Please re-upload.`,
+        loserNames,
+        punishmentText,
+      ).catch(console.error)
+    }
     setShowRejectInput(false)
     setRejectNote('')
   }
@@ -280,7 +264,7 @@ function WinnerProofReview({
           Awaiting approval
         </span>
       </div>
-      <img src={proof.fileUrl} alt="Punishment proof" className="w-full rounded-xl mb-3 object-cover max-h-72" />
+      <ProofMedia url={proof.fileUrl} alt="Punishment proof" />
       <p className="text-xs text-slate-500 mb-4">
         Uploaded{' '}
         {new Date(proof.uploadedAt).toLocaleString('en-GB', {
@@ -576,7 +560,6 @@ export default function BetDetail() {
             betId={bet.id}
             loserName={currentUserParticipant.username}
             punishmentText={punishmentText}
-            onApproved={() => acknowledgePunishment(bet.id)}
           />
         </div>
       )}
@@ -587,6 +570,8 @@ export default function BetDetail() {
           <WinnerProofReview
             betId={bet.id}
             loserNames={loserNames}
+            loserUserIds={losers.map((p) => p.userId)}
+            punishmentText={punishmentText}
             onApproved={() => acknowledgePunishment(bet.id)}
           />
         </div>
