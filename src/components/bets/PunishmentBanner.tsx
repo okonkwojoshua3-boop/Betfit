@@ -1,4 +1,6 @@
+import { useRef } from 'react'
 import { getPunishmentById } from '../../data/punishments'
+import { useProof } from '../../hooks/useProof'
 import type { Bet, Match } from '../../types'
 
 interface Props {
@@ -10,7 +12,17 @@ interface Props {
 
 export default function PunishmentBanner({ bet, match, punishmentText, onDone }: Props) {
   const punishment = getPunishmentById(bet.punishment.punishmentId)
+  const { uploadProof, uploading } = useProof(bet.id)
+  const fileRef = useRef<HTMLInputElement>(null)
+
   if (!punishment) return null
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    await uploadProof(file)
+    onDone()
+  }
 
   const participants = bet.participants ?? []
   const winners = participants.filter((p) => p.teamPickId !== bet.losingTeamId)
@@ -54,11 +66,20 @@ export default function PunishmentBanner({ bet, match, punishmentText, onDone }:
           <p className="text-4xl mt-2">{punishment.emoji}</p>
         </div>
 
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*,video/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleFileChange}
+        />
         <button
-          onClick={onDone}
-          className="w-full bg-red-500 hover:bg-red-400 active:bg-red-600 text-white font-bold py-4 rounded-xl text-lg transition-all duration-200 shadow-lg shadow-red-500/20 hover:shadow-red-500/30"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="w-full bg-red-500 hover:bg-red-400 active:bg-red-600 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-4 rounded-xl text-lg transition-all duration-200 shadow-lg shadow-red-500/20 hover:shadow-red-500/30"
         >
-          📸 Upload Proof
+          {uploading ? 'Uploading…' : '📸 Upload Proof'}
         </button>
         <p className="text-slate-600 text-xs text-center">
           Take a photo or video — your opponent must approve it.
