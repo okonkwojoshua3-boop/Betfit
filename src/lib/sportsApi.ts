@@ -158,68 +158,140 @@ export interface LiveMatchData {
   statusText: string       // "67'", "HT", "Q3 4:23", "FT"
 }
 
-// ── fetchTodayMatches — AllSports live + today's scheduled ───────────────────
-export async function fetchTodayMatches(): Promise<{ football: Match[]; basketball: Match[] }> {
-  const now = new Date()
-  const dd   = String(now.getDate()).padStart(2, '0')
-  const mm   = String(now.getMonth() + 1).padStart(2, '0')
-  const yyyy = now.getFullYear()
-  const dateParam = `${dd}.${mm}.${yyyy}` // AllSports date format: DD.MM.YYYY
+// ── ESPN helpers for today's scheduled matches ────────────────────────────────
+// AllSports has no scheduled/upcoming endpoint — only live (inprogress) events.
+// ESPN's scoreboard endpoint reliably returns today's upcoming matches.
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async function fetchEvents(url: string): Promise<any[]> {
-    try {
-      const res = await fetch(url, { headers: allSportsHeaders() })
-      if (!res.ok) return []
-      const data = await res.json()
-      return data.events ?? []
-    } catch {
-      return []
+const ESPN_TODAY_FOOTBALL_LEAGUES = [
+  'eng.1', 'esp.1', 'ger.1', 'ita.1', 'fra.1',
+  'ned.1', 'por.1', 'tur.1', 'eng.2',
+  'uefa.champions_league', 'uefa.europa', 'uefa.europa.conf',
+  'fifa.friendly', 'UEFA.Nations', 'uefa.nations',
+  'fifa.worldq.europe', 'fifa.worldq.conmebol', 'fifa.worldq.concacaf',
+  'fifa.worldq.afc', 'fifa.worldq.caf',
+  'UEFA.EURO', 'fifa.world', 'conmebol.america', 'concacaf.gold',
+  'africa.nations', 'eng.fa_cup', 'esp.copa_del_rey',
+]
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function espnMapEvent(event: any, sport: Sport): Match | null {
+  try {
+    const competition = event.competitions[0]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const home = competition.competitors.find((c: any) => c.homeAway === 'home')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const away = competition.competitors.find((c: any) => c.homeAway === 'away')
+    if (!home || !away) return null
+    const statusName: string = event.status?.type?.name ?? ''
+    let status: MatchStatus = 'upcoming'
+    if (statusName === 'STATUS_FINAL') status = 'finished'
+    else if (statusName === 'STATUS_IN_PROGRESS' || statusName === 'STATUS_HALFTIME') status = 'live'
+    return {
+      id: `espn-${event.id}`,
+      sport,
+      homeTeam: {
+        id: home.team.id,
+        name: home.team.displayName,
+        shortCode: home.team.abbreviation,
+        badgeColor: 'bg-slate-600',
+        emoji: sport === 'football' ? '⚽' : '🏀',
+        logo: home.team.logo as string | undefined,
+      },
+      awayTeam: {
+        id: away.team.id,
+        name: away.team.displayName,
+        shortCode: away.team.abbreviation,
+        badgeColor: 'bg-slate-600',
+        emoji: sport === 'football' ? '⚽' : '🏀',
+        logo: away.team.logo as string | undefined,
+      },
+      scheduledAt: event.date,
+      status,
     }
-  }
+  } catch { return null }
+}
 
-  const [liveEvents, footballEvents, basketballEvents] = await Promise.all([
-    fetchEvents(`${ALLSPORTS_BASE}/api/matches/live`),
-    fetchEvents(`${ALLSPORTS_BASE}/api/football/${dateParam}/matches`),
-    fetchEvents(`${ALLSPORTS_BASE}/api/basketball/${dateParam}/matches`),
+async function fetchEspnUpcoming(dateStr: string): Promise<{ football: Match[]; basketball: Match[] }> {
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+
+  const [footballResults, basketballMatches] = await Promise.all([
+    Promise.all(
+      ESPN_TODAY_FOOTBALL_LEAGUES.map(async (league) => {
+        try {
+          const res = await fetch(`${ESPN_BASE}/soccer/${league}/scoreboard?dates=${dateStr}`)
+          if (!res.ok) return []
+          const data = await res.json()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return (data.events ?? []).map((e: any) => espnMapEvent(e, 'football')).filter(Boolean) as Match[]
+        } catch { return [] }
+      }),
+    ),
+    (async () => {
+      try {
+        const res = await fetch(`${ESPN_BASE}/basketball/nba/scoreboard?dates=${dateStr}`)
+        if (!res.ok) return []
+        const data = await res.json()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (data.events ?? []).map((e: any) => espnMapEvent(e, 'basketball')).filter(Boolean) as Match[]
+      } catch { return [] }
+    })(),
   ])
 
-  const football: Match[]  = []
-  const basketball: Match[] = []
-  const seen = new Set<number>()
+  // Dedup football and filter to upcoming/live only
+  const footballMap = new Map<string, Match>()
+  for (const m of footballResults.flat()) footballMap.set(m.id, m)
+  const upcoming = (m: Match) => m.status !== 'finished' && new Date(m.scheduledAt) >= todayStart
 
-  // Live events first — they carry real-time score/status data
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for (const ev of liveEvents as any[]) {
-    const sportSlug: string = ev.tournament?.category?.sport?.slug ?? ''
-    if (sportSlug === 'football') {
-      seen.add(ev.id)
-      football.push(mapAllSportsEvent(ev, 'football'))
-    } else if (sportSlug === 'basketball') {
-      seen.add(ev.id)
-      basketball.push(mapAllSportsEvent(ev, 'basketball'))
-    }
+  return {
+    football: Array.from(footballMap.values()).filter(upcoming),
+    basketball: basketballMatches.filter(upcoming),
   }
+}
 
-  // Today's scheduled football — skip already-seen (live) and finished matches
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for (const ev of footballEvents as any[]) {
-    if (seen.has(ev.id)) continue
-    if ((ev.status?.type ?? '') === 'finished') continue
-    seen.add(ev.id)
-    football.push(mapAllSportsEvent(ev, 'football'))
+// ── fetchTodayMatches — AllSports live + ESPN upcoming ───────────────────────
+export async function fetchTodayMatches(): Promise<{ football: Match[]; basketball: Match[] }> {
+  const today = new Date()
+  const dateStr =
+    today.getFullYear().toString() +
+    String(today.getMonth() + 1).padStart(2, '0') +
+    String(today.getDate()).padStart(2, '0')
+
+  const [allSportsLive, espnToday] = await Promise.all([
+    // AllSports: real-time live matches with accurate minute/score
+    (async () => {
+      try {
+        const res = await fetch(`${ALLSPORTS_BASE}/api/matches/live`, { headers: allSportsHeaders() })
+        if (!res.ok) return { football: [] as Match[], basketball: [] as Match[] }
+        const data = await res.json()
+        const events: unknown[] = data.events ?? []
+        const football: Match[] = []
+        const basketball: Match[] = []
+        for (const e of events) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const ev = e as any
+          const sportSlug: string = ev.tournament?.category?.sport?.slug ?? ''
+          if (sportSlug === 'football') football.push(mapAllSportsEvent(ev, 'football'))
+          else if (sportSlug === 'basketball') basketball.push(mapAllSportsEvent(ev, 'basketball'))
+        }
+        return { football, basketball }
+      } catch { return { football: [] as Match[], basketball: [] as Match[] } }
+    })(),
+    // ESPN: today's scheduled/upcoming matches (AllSports has no scheduled endpoint)
+    fetchEspnUpcoming(dateStr),
+  ])
+
+  // Merge: AllSports live first, then ESPN upcoming (exclude already-live by team name pair)
+  const liveKeys = new Set([
+    ...allSportsLive.football.map(m => `${m.homeTeam.name}|${m.awayTeam.name}`),
+    ...allSportsLive.basketball.map(m => `${m.homeTeam.name}|${m.awayTeam.name}`),
+  ])
+  const notAlreadyLive = (m: Match) => !liveKeys.has(`${m.homeTeam.name}|${m.awayTeam.name}`)
+
+  return {
+    football:   [...allSportsLive.football,   ...espnToday.football.filter(notAlreadyLive)],
+    basketball: [...allSportsLive.basketball, ...espnToday.basketball.filter(notAlreadyLive)],
   }
-
-  // Today's scheduled basketball — same dedup/filter
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for (const ev of basketballEvents as any[]) {
-    if (seen.has(ev.id)) continue
-    if ((ev.status?.type ?? '') === 'finished') continue
-    seen.add(ev.id)
-    basketball.push(mapAllSportsEvent(ev, 'basketball'))
-  }
-
-  return { football, basketball }
 }
 
 // ── fetchMatchLiveData ────────────────────────────────────────────────────────

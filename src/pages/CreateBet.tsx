@@ -366,8 +366,10 @@ export default function CreateBet() {
             <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
               {filteredMatches.length === 0 ? (
                 <div className="text-center py-10 text-slate-500 text-sm">No matches found for today.</div>
-              ) : (
-                filteredMatches.map((match) => (
+              ) : (() => {
+                const liveNow    = filteredMatches.filter(m => m.status === 'live')
+                const upcoming   = filteredMatches.filter(m => m.status !== 'live')
+                const MatchCard = (match: typeof filteredMatches[0]) => (
                   <button
                     key={match.id}
                     onClick={() => update({ selectedMatchId: match.id, creatorPickId: '' })}
@@ -382,26 +384,43 @@ export default function CreateBet() {
                         <SportIcon sport={match.sport} size="sm" />
                         <span className="text-xs text-slate-500 uppercase tracking-wide">{match.sport}</span>
                       </div>
-                      {match.status === 'live' && (
+                      {match.status === 'live' ? (
                         <span className="text-xs text-red-400 font-semibold flex items-center gap-1">
                           <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />
-                          LIVE
+                          {match.statusText ?? 'LIVE'}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-500">
+                          {new Date(match.scheduledAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       )}
                     </div>
                     <div className="text-white font-semibold">
                       {match.homeTeam.name} vs {match.awayTeam.name}
                     </div>
-                    <div className="text-xs text-slate-500 mt-0.5">
-                      {match.status === 'live' && match.statusText
-                        ? match.statusText
-                        : new Date(match.scheduledAt).toLocaleDateString('en-GB', {
-                            weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-                          })}
-                    </div>
                   </button>
-                ))
-              )}
+                )
+                return (
+                  <>
+                    {liveNow.length > 0 && (
+                      <>
+                        <p className="text-[11px] text-red-400 font-semibold uppercase tracking-widest px-1 pt-1 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" /> Live now
+                        </p>
+                        {liveNow.map(MatchCard)}
+                      </>
+                    )}
+                    {upcoming.length > 0 && (
+                      <>
+                        <p className={`text-[11px] text-slate-500 font-semibold uppercase tracking-widest px-1 ${liveNow.length > 0 ? 'pt-3' : 'pt-1'}`}>
+                          Upcoming today
+                        </p>
+                        {upcoming.map(MatchCard)}
+                      </>
+                    )}
+                  </>
+                )
+              })()}
             </div>
           )}
         </div>
