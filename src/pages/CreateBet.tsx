@@ -5,6 +5,7 @@ import { useBets } from '../store/BetContext'
 import { useAuth } from '../store/AuthContext'
 import { useLiveMatches } from '../hooks/useLiveMatches'
 import { saveMatch } from '../store/matchStore'
+import { supabase } from '../lib/supabase'
 import { searchProfiles } from '../services/betService'
 import { createNotification } from '../services/notificationService'
 import type { Match, Sport } from '../types'
@@ -108,6 +109,13 @@ export default function CreateBet() {
     setCreating(true)
     setCreateError(null)
     try {
+      // Verify auth session is still valid before hitting the DB
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setCreateError('Session expired — please refresh the page and sign in again.')
+        return
+      }
+
       if (selectedMatch) saveMatch(selectedMatch)
 
       const created = await addBet({
