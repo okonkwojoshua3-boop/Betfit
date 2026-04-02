@@ -272,8 +272,50 @@ async function fetchEspnUpcoming(dateStr: string): Promise<{ football: Match[]; 
   }
 }
 
+// ── fetchAllSportsLive — AllSports live only (cheap, used for polling) ────────
+export async function fetchAllSportsLive(): Promise<{ football: Match[]; basketball: Match[] }> {
+  try {
+    const res = await fetch(`${ALLSPORTS_BASE}/api/matches/live`, { headers: allSportsHeaders() })
+    if (!res.ok) return { football: [], basketball: [] }
+    const data = await res.json()
+    const events: unknown[] = data.events ?? []
+    const football: Match[] = []
+    const basketball: Match[] = []
+    for (const e of events) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ev = e as any
+      const sportSlug: string = ev.tournament?.category?.sport?.slug ?? ''
+      if (sportSlug === 'football') football.push(mapAllSportsEvent(ev, 'football'))
+      else if (sportSlug === 'basketball') basketball.push(mapAllSportsEvent(ev, 'basketball'))
+    }
+    return { football, basketball }
+  } catch { return { football: [], basketball: [] } }
+}
+
+// ── Merge AllSports live with ESPN upcoming ───────────────────────────────────
+export function mergeMatches(
+  live: { football: Match[]; basketball: Match[] },
+  upcoming: { football: Match[]; basketball: Match[] },
+): { football: Match[]; basketball: Match[] } {
+  const liveKeys = new Set([
+    ...live.football.map(m => `${m.homeTeam.name}|${m.awayTeam.name}`),
+    ...live.basketball.map(m => `${m.homeTeam.name}|${m.awayTeam.name}`),
+  ])
+  const notAlreadyLive = (m: Match) => !liveKeys.has(`${m.homeTeam.name}|${m.awayTeam.name}`)
+  const byKickoff = (a: Match, b: Match) =>
+    new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
+  return {
+    football: [...live.football, ...upcoming.football.filter(notAlreadyLive).sort(byKickoff)],
+    basketball: [...live.basketball, ...upcoming.basketball.filter(notAlreadyLive).sort(byKickoff)],
+  }
+}
+
 // ── fetchTodayMatches — AllSports live + ESPN upcoming ───────────────────────
-export async function fetchTodayMatches(): Promise<{ football: Match[]; basketball: Match[] }> {
+export async function fetchTodayMatches(): Promise<{
+  football: Match[]
+  basketball: Match[]
+  espnUpcoming: { football: Match[]; basketball: Match[] }
+}> {
   const today = new Date()
   const dateStr =
     today.getFullYear().toString() +
@@ -281,49 +323,13 @@ export async function fetchTodayMatches(): Promise<{ football: Match[]; basketba
     String(today.getDate()).padStart(2, '0')
 
   const [allSportsLive, espnToday] = await Promise.all([
-    // AllSports: real-time live matches with accurate minute/score
-    (async () => {
-      try {
-        const res = await fetch(`${ALLSPORTS_BASE}/api/matches/live`, { headers: allSportsHeaders() })
-        if (!res.ok) return { football: [] as Match[], basketball: [] as Match[] }
-        const data = await res.json()
-        const events: unknown[] = data.events ?? []
-        const football: Match[] = []
-        const basketball: Match[] = []
-        for (const e of events) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const ev = e as any
-          const sportSlug: string = ev.tournament?.category?.sport?.slug ?? ''
-          if (sportSlug === 'football') football.push(mapAllSportsEvent(ev, 'football'))
-          else if (sportSlug === 'basketball') basketball.push(mapAllSportsEvent(ev, 'basketball'))
-        }
-        return { football, basketball }
-      } catch { return { football: [] as Match[], basketball: [] as Match[] } }
-    })(),
+    fetchAllSportsLive(),
     // ESPN: today's scheduled/upcoming matches (AllSports has no scheduled endpoint)
     fetchEspnUpcoming(dateStr),
   ])
 
-  // Merge: AllSports live first, then ESPN upcoming (exclude already-live by team name pair)
-  const liveKeys = new Set([
-    ...allSportsLive.football.map(m => `${m.homeTeam.name}|${m.awayTeam.name}`),
-    ...allSportsLive.basketball.map(m => `${m.homeTeam.name}|${m.awayTeam.name}`),
-  ])
-  const notAlreadyLive = (m: Match) => !liveKeys.has(`${m.homeTeam.name}|${m.awayTeam.name}`)
-
-  const byKickoff = (a: Match, b: Match) =>
-    new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
-
-  return {
-    football: [
-      ...allSportsLive.football,
-      ...espnToday.football.filter(notAlreadyLive).sort(byKickoff),
-    ],
-    basketball: [
-      ...allSportsLive.basketball,
-      ...espnToday.basketball.filter(notAlreadyLive).sort(byKickoff),
-    ],
-  }
+  const merged = mergeMatches(allSportsLive, espnToday)
+  return { ...merged, espnUpcoming: espnToday }
 }
 
 // ── fetchMatchLiveData ────────────────────────────────────────────────────────
