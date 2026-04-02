@@ -12,7 +12,7 @@ interface Props {
 
 export default function PunishmentBanner({ bet, match, punishmentText, onDone }: Props) {
   const punishment = getPunishmentById(bet.punishment.punishmentId)
-  const { uploadProof, uploading } = useProof(bet.id)
+  const { uploadProof, uploading, uploadError } = useProof(bet.id)
   const fileRef = useRef<HTMLInputElement>(null)
 
   if (!punishment) return null
@@ -20,8 +20,9 @@ export default function PunishmentBanner({ bet, match, punishmentText, onDone }:
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    await uploadProof(file)
-    onDone()
+    const ok = await uploadProof(file)
+    e.target.value = ''
+    if (ok) onDone()
   }
 
   const participants = bet.participants ?? []
@@ -66,11 +67,13 @@ export default function PunishmentBanner({ bet, match, punishmentText, onDone }:
           <p className="text-4xl mt-2">{punishment.emoji}</p>
         </div>
 
+        {uploadError && (
+          <p className="w-full text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-center">{uploadError}</p>
+        )}
         <input
           ref={fileRef}
           type="file"
           accept="image/*,video/*"
-          capture="environment"
           className="hidden"
           onChange={handleFileChange}
         />

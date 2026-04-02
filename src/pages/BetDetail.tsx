@@ -101,13 +101,15 @@ function ProofSection({
   loserName: string
   punishmentText: string
 }) {
-  const { proof, uploading, uploadProof, clearProof } = useProof(betId)
+  const { proof, uploading, uploadError, uploadProof, clearProof } = useProof(betId)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    uploadProof(file)
+    await uploadProof(file)
+    // reset input so the same file can be re-selected after a failure
+    e.target.value = ''
   }
 
   if (!proof || !proof.fileUrl) {
@@ -118,10 +120,13 @@ function ProofSection({
           <h3 className="font-bold text-white">Upload Proof</h3>
         </div>
         <p className="text-sm text-slate-400 mb-4">
-          <span className="text-amber-400 font-semibold">{loserName}</span> — take a photo showing you completed{' '}
+          <span className="text-amber-400 font-semibold">{loserName}</span> — take a photo or video showing you completed{' '}
           <span className="text-white font-semibold">{punishmentText}</span>.
         </p>
-        <input ref={fileRef} type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={handleFileChange} />
+        {uploadError && (
+          <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-3">{uploadError}</p>
+        )}
+        <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFileChange} />
         <button
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
@@ -129,7 +134,7 @@ function ProofSection({
         >
           {uploading ? 'Uploading…' : '📷 Choose Photo or Video'}
         </button>
-        <p className="text-xs text-slate-600 text-center mt-2">Photo or video · Stored securely.</p>
+        <p className="text-xs text-slate-600 text-center mt-2">Photo or video · max 50MB</p>
       </div>
     )
   }
@@ -147,19 +152,22 @@ function ProofSection({
           </p>
         )}
         <div className="opacity-40 grayscale mb-4"><ProofMedia url={proof.fileUrl} alt="Rejected proof" /></div>
+        {uploadError && (
+          <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-3">{uploadError}</p>
+        )}
         <input
           ref={fileRef}
           type="file"
           accept="image/*,video/*"
-          capture="environment"
           className="hidden"
           onChange={(e) => { clearProof(); handleFileChange(e) }}
         />
         <button
           onClick={() => fileRef.current?.click()}
-          className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 rounded-xl transition-colors"
+          disabled={uploading}
+          className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-black font-bold py-3 rounded-xl transition-colors"
         >
-          📷 Re-upload Proof
+          {uploading ? 'Uploading…' : '📷 Re-upload Proof'}
         </button>
       </div>
     )

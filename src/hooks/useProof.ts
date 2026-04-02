@@ -13,6 +13,7 @@ export function useProof(betId: string) {
   const { user } = useAuth()
   const [proof, setProof] = useState<BetProof | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   useEffect(() => {
     // Initial fetch
@@ -34,12 +35,26 @@ export function useProof(betId: string) {
     return () => { supabase.removeChannel(channel) }
   }, [betId])
 
-  const uploadProof = useCallback(async (file: File) => {
-    if (!user) return
+  const uploadProof = useCallback(async (file: File): Promise<boolean> => {
+    if (!user) {
+      setUploadError('Not signed in. Please refresh and try again.')
+      return false
+    }
     setUploading(true)
+    setUploadError(null)
     try {
       const p = await uploadProofPhoto(betId, user.id, file)
       setProof(p)
+      return true
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err !== null && 'message' in err
+            ? String((err as Record<string, unknown>).message)
+            : 'Upload failed. Please try again.'
+      setUploadError(msg || 'Upload failed. Please try again.')
+      return false
     } finally {
       setUploading(false)
     }
@@ -59,5 +74,5 @@ export function useProof(betId: string) {
     setProof(null)
   }, [])
 
-  return { proof, uploading, uploadProof, approveProof, rejectProof, clearProof }
+  return { proof, uploading, uploadError, uploadProof, approveProof, rejectProof, clearProof }
 }
