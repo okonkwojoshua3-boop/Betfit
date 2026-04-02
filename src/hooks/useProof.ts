@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { BetProof } from '../types'
 import { useAuth } from '../store/AuthContext'
+import { supabase } from '../lib/supabase'
 import {
   getProofForBet,
   uploadProofPhoto,
@@ -14,7 +15,23 @@ export function useProof(betId: string) {
   const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
+    // Initial fetch
     getProofForBet(betId).then(setProof).catch(console.error)
+
+    // Real-time subscription — winner sees proof appear without refreshing
+    const channel = supabase
+      .channel(`proof:${betId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'proofs', filter: `bet_id=eq.${betId}` },
+        () => {
+          // Re-fetch on any change (insert, update) so we always have fresh data
+          getProofForBet(betId).then(setProof).catch(console.error)
+        },
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
   }, [betId])
 
   const uploadProof = useCallback(async (file: File) => {
