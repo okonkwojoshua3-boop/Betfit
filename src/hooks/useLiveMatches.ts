@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import type { Match } from '../types'
 import { fetchTodayMatches } from '../lib/sportsApi'
 
-const SESSION_KEY = 'betfit_today_matches_v3'
+const SESSION_KEY = 'betfit_today_matches_v4'
 const today = new Date().toISOString().slice(0, 10) // 'YYYY-MM-DD'
 
 export interface LiveMatchesState {
