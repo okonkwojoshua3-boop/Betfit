@@ -148,7 +148,15 @@ export default function CreateBet() {
       }
     } catch (err) {
       console.error('Failed to create bet:', err)
-      setCreateError(err instanceof Error ? err.message : 'Failed to create bet. Please try again.')
+      // Extract message from Error instances, Supabase PostgrestErrors, or stringify
+      let msg = 'Unknown error'
+      if (err instanceof Error) {
+        msg = err.message
+      } else if (typeof err === 'object' && err !== null) {
+        const e = err as Record<string, unknown>
+        msg = [e.code, e.message, e.hint, e.details].filter(Boolean).join(' | ') || JSON.stringify(err)
+      }
+      setCreateError(msg)
     } finally {
       setCreating(false)
     }
