@@ -232,33 +232,104 @@ export default function CreateBet() {
         ← Back
       </button>
 
-      <h1 className="text-2xl font-black text-white mb-6">New Bet</h1>
+      <h1 className="font-display text-2xl font-bold text-white mb-7 tracking-tight">New Bet</h1>
 
-      {/* Progress */}
-      <div className="flex items-start mb-8">
+      {/* Progress stepper */}
+      <div className="flex items-center mb-9">
         {STEPS.map((label, i) => {
           const n = (i + 1) as Step
           const active = n === step
           const done = n < step
           const isLast = i === STEPS.length - 1
           return (
-            <div key={label} className="flex-1 flex flex-col items-center gap-1.5 relative">
+            <div key={label} className="flex-1 flex flex-col items-center relative" style={{ zIndex: 0 }}>
+              {/* Connecting track */}
               {!isLast && (
-                <div className={`absolute top-4 left-1/2 w-full h-0.5 transition-colors duration-300 ${done ? 'bg-emerald-500' : 'bg-slate-700'}`} />
+                <div
+                  className="absolute h-px overflow-hidden"
+                  style={{
+                    top: '18px',
+                    left: '50%',
+                    width: '100%',
+                    background: 'rgba(255,255,255,0.06)',
+                  }}
+                >
+                  <div
+                    className="h-full transition-all duration-500 ease-in-out"
+                    style={{
+                      width: done ? '100%' : '0%',
+                      background: 'linear-gradient(90deg, #22D672, #16A350)',
+                    }}
+                  />
+                </div>
               )}
-              <div
-                className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-200 ${
-                  done
-                    ? 'bg-emerald-500 text-white'
+
+              {/* Node */}
+              <button
+                onClick={() => done && setStep(n)}
+                disabled={!done}
+                className="relative z-10 flex items-center justify-center rounded-full transition-all duration-300 focus:outline-none"
+                style={{
+                  width: active ? '40px' : '36px',
+                  height: active ? '40px' : '36px',
+                  background: done
+                    ? 'linear-gradient(135deg, #22D672, #16A350)'
                     : active
-                      ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 ring-4 ring-emerald-500/10'
-                      : 'bg-slate-800 border border-slate-600 text-slate-500'
-                }`}
+                      ? 'linear-gradient(135deg, rgba(34,214,114,0.15), rgba(22,163,74,0.1))'
+                      : 'rgba(255,255,255,0.04)',
+                  border: done
+                    ? 'none'
+                    : active
+                      ? '1.5px solid rgba(34,214,114,0.7)'
+                      : '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: active
+                    ? '0 0 0 4px rgba(34,214,114,0.12), 0 0 20px rgba(34,214,114,0.25)'
+                    : done
+                      ? '0 2px 8px rgba(34,214,114,0.25)'
+                      : 'none',
+                }}
               >
-                {done ? '✓' : n}
-              </div>
-              <span className={`text-xs font-medium transition-colors ${active ? 'text-emerald-400' : done ? 'text-slate-400' : 'text-slate-600'}`}>
-                {label}
+                {done ? (
+                  <svg
+                    className="transition-all duration-300"
+                    width="14" height="14" viewBox="0 0 14 14" fill="none"
+                  >
+                    <path d="M2.5 7L5.5 10L11.5 4" stroke="#080C14" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  <span
+                    className="font-display font-bold leading-none transition-all duration-300"
+                    style={{
+                      fontSize: active ? '15px' : '13px',
+                      color: active ? '#22D672' : 'rgba(255,255,255,0.25)',
+                    }}
+                  >
+                    {n}
+                  </span>
+                )}
+
+                {/* Active pulse ring */}
+                {active && (
+                  <span
+                    className="absolute inset-0 rounded-full animate-ping"
+                    style={{
+                      background: 'rgba(34,214,114,0.15)',
+                      animationDuration: '2s',
+                    }}
+                  />
+                )}
+              </button>
+
+              {/* Label */}
+              <span
+                className="font-display font-semibold tracking-wide mt-2 transition-all duration-300"
+                style={{
+                  fontSize: '10px',
+                  letterSpacing: '0.06em',
+                  color: active ? '#22D672' : done ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.18)',
+                }}
+              >
+                {label.toUpperCase()}
               </span>
             </div>
           )
