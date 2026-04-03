@@ -53,6 +53,7 @@ export default function CreateBet() {
   const [notifiedOpponent, setNotifiedOpponent] = useState(false)
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [matchSearch, setMatchSearch] = useState('')
 
   useEffect(() => {
     if (!opponentQuery.trim() || selectedOpponent) {
@@ -88,10 +89,17 @@ export default function CreateBet() {
       ? liveList
       : [] // empty means "use fallback" below — but we already handle this
 
-  const filteredMatches =
+  const sportFiltered =
     state.sportFilter === 'all'
       ? allMatches
       : allMatches.filter((m) => m.sport === state.sportFilter)
+
+  const filteredMatches = matchSearch.trim()
+    ? sportFiltered.filter((m) =>
+        m.homeTeam.name.toLowerCase().includes(matchSearch.toLowerCase()) ||
+        m.awayTeam.name.toLowerCase().includes(matchSearch.toLowerCase())
+      )
+    : sportFiltered
 
   const selectedMatch = allMatches.find((m) => m.id === state.selectedMatchId)
   const selectedPunishment = PUNISHMENTS.find((p) => p.id === state.punishmentId)
@@ -216,7 +224,7 @@ export default function CreateBet() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
+    <div className="max-w-lg mx-auto px-4 py-8 pb-32">
       <button
         onClick={() => navigate(-1)}
         className="text-slate-400 hover:text-white text-sm mb-6 flex items-center gap-1"
@@ -361,7 +369,7 @@ export default function CreateBet() {
             )}
           </div>
 
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2 mb-3">
             {(['all', 'football', 'basketball'] as const).map((s) => (
               <button
                 key={s}
@@ -379,8 +387,32 @@ export default function CreateBet() {
             ))}
           </div>
 
+          {/* Search bar */}
+          <div className="relative mb-4">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              value={matchSearch}
+              onChange={(e) => setMatchSearch(e.target.value)}
+              placeholder="Search teams…"
+              className="w-full bg-slate-800 border border-slate-700 focus:border-emerald-500 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition-colors"
+            />
+            {matchSearch && (
+              <button
+                onClick={() => setMatchSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
           {liveMatches.loading ? (
-            <div className="space-y-2">
+            <div className="space-y-2 pb-24">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 animate-pulse">
                   <div className="h-3 bg-slate-700 rounded w-16 mb-2" />
@@ -390,9 +422,11 @@ export default function CreateBet() {
               ))}
             </div>
           ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+            <div className="space-y-2 pb-24">
               {filteredMatches.length === 0 ? (
-                <div className="text-center py-10 text-slate-500 text-sm">No matches found for today.</div>
+                <div className="text-center py-10 text-slate-500 text-sm">
+                  {matchSearch.trim() ? `No matches found for "${matchSearch}"` : 'No matches found for today.'}
+                </div>
               ) : (() => {
                 const byKickoff  = (a: Match, b: Match) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
                 const liveNow    = filteredMatches.filter(m => m.status === 'live').sort(byKickoff)
@@ -562,38 +596,52 @@ export default function CreateBet() {
         </div>
       )}
 
-      {/* Navigation */}
-      {createError && (
-        <div className="mt-4 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">
-          {createError}
+      {/* Sticky navigation bar */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-safe"
+        style={{
+          background: 'linear-gradient(to top, rgba(6,10,18,0.98) 70%, rgba(6,10,18,0))',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+          paddingTop: '20px',
+        }}
+      >
+        {createError && (
+          <div className="mb-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm max-w-lg mx-auto">
+            {createError}
+          </div>
+        )}
+        <div className="flex gap-3 max-w-lg mx-auto">
+          {step > 1 && (
+            <button
+              onClick={() => setStep((s) => (s - 1) as Step)}
+              className="flex-1 border border-white/10 text-white font-semibold py-3 rounded-xl transition-colors"
+              style={{ background: 'rgba(255,255,255,0.06)' }}
+            >
+              Back
+            </button>
+          )}
+          {step < 4 ? (
+            <button
+              onClick={() => setStep((s) => (s + 1) as Step)}
+              disabled={!canNext()}
+              className="flex-1 disabled:opacity-40 disabled:cursor-not-allowed text-pitch-950 font-semibold py-3 rounded-xl transition-all duration-200 active:scale-[0.98]"
+              style={{ background: canNext() ? 'linear-gradient(135deg,#22D672,#16A350)' : undefined, backgroundColor: canNext() ? undefined : 'rgb(51,65,85)' }}
+            >
+              <span className={canNext() ? 'text-pitch-950' : 'text-slate-500'}>Next</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleCreate}
+              disabled={!canNext() || creating}
+              className="flex-1 disabled:opacity-40 disabled:cursor-not-allowed font-bold py-3 rounded-xl transition-all duration-200 active:scale-[0.98]"
+              style={{ background: canNext() && !creating ? 'linear-gradient(135deg,#22D672,#16A350)' : 'rgb(51,65,85)', color: canNext() && !creating ? '#080C14' : '#64748b', boxShadow: canNext() && !creating ? '0 2px 16px rgba(34,214,114,0.25)' : 'none' }}
+            >
+              {creating ? 'Creating…' : '🏆 Create & Get Link'}
+            </button>
+          )}
         </div>
-      )}
-      <div className="flex gap-3 mt-4">
-        {step > 1 && (
-          <button
-            onClick={() => setStep((s) => (s - 1) as Step)}
-            className="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold py-3 rounded-xl transition-colors"
-          >
-            Back
-          </button>
-        )}
-        {step < 4 ? (
-          <button
-            onClick={() => setStep((s) => (s + 1) as Step)}
-            disabled={!canNext()}
-            className="flex-1 bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold py-3 rounded-xl transition-colors"
-          >
-            Next
-          </button>
-        ) : (
-          <button
-            onClick={handleCreate}
-            disabled={!canNext() || creating}
-            className="flex-1 bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-xl transition-colors"
-          >
-            {creating ? 'Creating…' : '🏆 Create & Get Link'}
-          </button>
-        )}
       </div>
     </div>
   )
