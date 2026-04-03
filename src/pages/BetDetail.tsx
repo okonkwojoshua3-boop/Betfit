@@ -333,7 +333,7 @@ function WinnerProofReview({
 export default function BetDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getBetById, resolveBet, acknowledgePunishment, requestCancel, approveCancel, declineCancel } = useBets()
+  const { getBetById, resolveBet, acknowledgePunishment, declineBet, requestCancel, approveCancel, declineCancel } = useBets()
   const { profile } = useAuth()
 
   const bet = id ? getBetById(id) : undefined
@@ -628,8 +628,20 @@ export default function BetDetail() {
         </div>
       )}
 
-      {/* Cancel bet — creator only, active bets */}
-      {bet.status === 'active' && isCreator && (
+      {/* Delete bet — creator only, pending bets (no one has joined yet) */}
+      {bet.status === 'pending' && isCreator && (
+        <div className="mb-4">
+          <button
+            onClick={async () => { await declineBet(bet.id); navigate('/dashboard') }}
+            className="w-full text-xs text-slate-600 hover:text-red-400 py-2 transition-colors"
+          >
+            Delete this bet
+          </button>
+        </div>
+      )}
+
+      {/* Cancel bet — creator only, active or due bets */}
+      {(bet.status === 'active' || bet.status === 'punishment_pending') && isCreator && (
         <div className="mb-4">
           <button
             onClick={() => requestCancel(bet.id, otherParticipants)}
