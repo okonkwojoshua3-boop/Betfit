@@ -640,14 +640,26 @@ export default function BetDetail() {
         </div>
       )}
 
-      {/* Cancel bet — creator only, active or due bets */}
-      {(bet.status === 'active' || bet.status === 'punishment_pending') && isCreator && (
+      {/* Cancel bet — creator only, active bets */}
+      {bet.status === 'active' && isCreator && (
         <div className="mb-4">
           <button
             onClick={() => requestCancel(bet.id, otherParticipants)}
             className="w-full text-xs text-slate-600 hover:text-red-400 py-2 transition-colors"
           >
             Request to cancel this bet
+          </button>
+        </div>
+      )}
+
+      {/* Force delete — any participant, due bets */}
+      {bet.status === 'punishment_pending' && (isCreator || !!currentUserParticipant) && (
+        <div className="mb-4">
+          <button
+            onClick={async () => { await declineBet(bet.id); navigate('/dashboard') }}
+            className="w-full text-xs text-slate-600 hover:text-red-400 py-2 transition-colors"
+          >
+            Delete this bet
           </button>
         </div>
       )}
