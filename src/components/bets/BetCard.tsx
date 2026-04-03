@@ -188,28 +188,47 @@ export default function BetCard({ bet }: { bet: Bet }) {
         {/* Divider */}
         <div className="h-px bg-white/5 mb-3" />
 
-        {/* Participants */}
+        {/* Participants — horizontal scroll row */}
         {participants.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {participants.map((p) => {
-              const pickedHome = p.teamPickId === homeTeamId
-              const isLoser = bet.losingTeamId && bet.losingTeamId !== 'draw' && p.teamPickId === bet.losingTeamId
-              const isWinner = bet.losingTeamId && bet.losingTeamId !== 'draw' && p.teamPickId !== bet.losingTeamId
-              return (
-                <span
-                  key={p.userId}
-                  className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
-                    isLoser
-                      ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                      : isWinner
-                        ? 'bg-neon-green/10 text-neon-green border border-neon-green/20'
-                        : 'bg-white/5 text-slate-400 border border-white/8'
-                  }`}
-                >
-                  {p.username} {pickedHome ? homeTeamEmoji : awayTeamEmoji}
-                </span>
-              )
-            })}
+          <div className="relative mb-3">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-0.5">
+              {participants.map((p) => {
+                const pickedHome = p.teamPickId === homeTeamId
+                const isLoser = bet.losingTeamId && bet.losingTeamId !== 'draw' && p.teamPickId === bet.losingTeamId
+                const isWinner = bet.losingTeamId && bet.losingTeamId !== 'draw' && p.teamPickId !== bet.losingTeamId
+                return (
+                  <div
+                    key={p.userId}
+                    className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl"
+                    style={{
+                      minWidth: '100px',
+                      background: isLoser
+                        ? 'rgba(239,68,68,0.08)'
+                        : isWinner
+                          ? 'rgba(34,214,114,0.08)'
+                          : 'rgba(255,255,255,0.04)',
+                      border: isLoser
+                        ? '1px solid rgba(239,68,68,0.2)'
+                        : isWinner
+                          ? '1px solid rgba(34,214,114,0.2)'
+                          : '1px solid rgba(255,255,255,0.07)',
+                    }}
+                  >
+                    <span className="text-sm shrink-0">{pickedHome ? homeTeamEmoji : awayTeamEmoji}</span>
+                    <div className="min-w-0">
+                      <div className="text-[10px] text-slate-500 truncate leading-none mb-0.5">{p.username}</div>
+                      <div className={`text-[11px] font-semibold truncate leading-none ${isLoser ? 'text-red-400' : isWinner ? 'text-neon-green' : 'text-slate-300'}`}>
+                        {pickedHome ? homeTeamName.split(' ')[0] : awayTeamName.split(' ')[0]}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            {/* Right fade hint */}
+            {participants.length > 2 && (
+              <div className="absolute right-0 top-0 bottom-0.5 w-8 pointer-events-none rounded-r-xl" style={{ background: 'linear-gradient(to right, transparent, rgba(13,21,37,0.9))' }} />
+            )}
           </div>
         ) : (
           <div className="flex gap-2 mb-3">

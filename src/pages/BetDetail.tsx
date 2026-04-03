@@ -530,38 +530,45 @@ export default function BetDetail() {
             </div>
           </div>
 
-          {/* Participants */}
+          {/* Participants — horizontal scroll row */}
           {participants.length > 0 ? (
             <div>
               <div className="h-px bg-white/5 mb-4" />
               <p className="text-[11px] text-slate-600 uppercase tracking-widest mb-3">
                 {participants.length} {participants.length === 1 ? 'player' : 'players'}
               </p>
-              <div className="grid grid-cols-2 gap-2">
-                {participants.map((p) => {
-                  const team = match.homeTeam.id === p.teamPickId ? match.homeTeam : match.awayTeam
-                  const isLoser = !isDraw && losingTeamId && p.teamPickId === losingTeamId
-                  const isWinner = !isDraw && losingTeamId && p.teamPickId !== losingTeamId
-                  return (
-                    <div
-                      key={p.userId}
-                      className="rounded-xl p-3 transition-colors"
-                      style={{
-                        background: isLoser ? 'rgba(239,68,68,0.06)' : isWinner ? 'rgba(34,214,114,0.06)' : 'rgba(255,255,255,0.03)',
-                        border: isLoser ? '1px solid rgba(239,68,68,0.2)' : isWinner ? '1px solid rgba(34,214,114,0.2)' : '1px solid rgba(255,255,255,0.06)',
-                      }}
-                    >
-                      <div className="text-[11px] text-slate-500 mb-1 truncate">{p.username}</div>
-                      <div className="flex items-center gap-1.5">
-                        <span>{team.emoji}</span>
-                        <span className="font-semibold text-white text-sm truncate">{team.name}</span>
+              <div className="relative">
+                <div className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-1">
+                  {participants.map((p) => {
+                    const team = match.homeTeam.id === p.teamPickId ? match.homeTeam : match.awayTeam
+                    const isLoser = !isDraw && losingTeamId && p.teamPickId === losingTeamId
+                    const isWinner = !isDraw && losingTeamId && p.teamPickId !== losingTeamId
+                    return (
+                      <div
+                        key={p.userId}
+                        className="shrink-0 rounded-xl p-3 flex flex-col gap-1.5"
+                        style={{
+                          minWidth: '130px',
+                          background: isLoser ? 'rgba(239,68,68,0.06)' : isWinner ? 'rgba(34,214,114,0.06)' : 'rgba(255,255,255,0.03)',
+                          border: isLoser ? '1px solid rgba(239,68,68,0.2)' : isWinner ? '1px solid rgba(34,214,114,0.2)' : '1px solid rgba(255,255,255,0.06)',
+                        }}
+                      >
+                        <div className="text-[11px] text-slate-500 truncate">{p.username}</div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-base shrink-0">{team.emoji}</span>
+                          <span className="font-semibold text-white text-xs truncate">{team.name}</span>
+                        </div>
+                        {isWinner && <div className="text-[10px] text-neon-green font-semibold">🎉 Won!</div>}
+                        {isLoser && <div className="text-[10px] text-red-400 font-semibold">😬 Lost</div>}
+                        {isDraw && losingTeamId && <div className="text-[10px] text-slate-500">Draw</div>}
                       </div>
-                      {isWinner && <div className="text-[11px] text-neon-green mt-1.5 font-semibold">🎉 Won!</div>}
-                      {isLoser && <div className="text-[11px] text-red-400 mt-1.5 font-semibold">😬 Lost</div>}
-                      {isDraw && losingTeamId && <div className="text-[11px] text-slate-500 mt-1.5">Draw</div>}
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
+                {/* Right fade hint when more cards overflow */}
+                {participants.length > 3 && (
+                  <div className="absolute right-0 top-0 bottom-1 w-10 pointer-events-none" style={{ background: 'linear-gradient(to right, transparent, rgba(13,21,37,0.95))' }} />
+                )}
               </div>
               {bet.status === 'pending' && (
                 <p className="text-[11px] text-slate-600 mt-3 text-center">

@@ -121,4 +121,12 @@
 
   .animate-fill-both { animation-fill-mode: both; }
   .animate-fill-forwards { animation-fill-mode: forwards; }
+
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
