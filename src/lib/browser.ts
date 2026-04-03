@@ -2,14 +2,14 @@
  * Detects whether the current environment is an in-app browser (WebView).
  * Google OAuth blocks these with Error 403: disallowed_useragent.
  *
- * Covers: WhatsApp, Instagram, Facebook, TikTok, WeChat, Line,
- *         Android WebView (wv flag), iOS WKWebView (no Safari in UA).
+ * Covers: WhatsApp, Instagram, Facebook, TikTok, Snapchat, Twitter/X,
+ *         WeChat, Line, Android WebView (wv flag), iOS WKWebView.
  */
 export function isInAppBrowser(): boolean {
   const ua = navigator.userAgent
 
   // Explicit in-app browser identifiers
-  if (/FBAN|FBAV|FB_IAB|Instagram|Line\/\d|MicroMessenger|TikTok|musical_ly/i.test(ua)) {
+  if (/FBAN|FBAV|FB_IAB|Instagram|Line\/\d|MicroMessenger|TikTok|musical_ly|Snapchat|Twitter/i.test(ua)) {
     return true
   }
 
