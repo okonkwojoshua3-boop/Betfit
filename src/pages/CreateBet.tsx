@@ -532,9 +532,9 @@ export default function CreateBet() {
           {selectedMatch && state.punishmentId && selectedPunishment && (
             <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-2 text-sm">
               <div className="font-semibold text-slate-300 mb-3">Bet Summary</div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Match</span>
-                <span className="text-white font-medium">
+              <div className="flex justify-between gap-2">
+                <span className="text-slate-500 shrink-0">Match</span>
+                <span className="text-white font-medium text-right truncate min-w-0">
                   {selectedMatch.homeTeam.name} vs {selectedMatch.awayTeam.name}
                 </span>
               </div>

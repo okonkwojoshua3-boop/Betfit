@@ -49,19 +49,19 @@ export default function PunishmentBanner({ bet, match, punishmentText, onDone }:
       </div>
 
       {/* Main reveal */}
-      <div className="flex flex-col items-center gap-6 max-w-sm w-full">
-        <div className="text-8xl animate-bounce">{punishment.emoji}</div>
+      <div className="flex flex-col items-center gap-5 max-w-sm w-full pt-14 sm:pt-0">
+        <div className="text-6xl sm:text-8xl animate-bounce">{punishment.emoji}</div>
 
         <div>
-          <p className="text-slate-400 text-lg mb-2">
+          <p className="text-slate-400 text-base sm:text-lg mb-2">
             You backed {losingTeam.emoji} {losingTeam.name}...
           </p>
-          <h1 className="text-5xl font-black text-red-400 tracking-tight uppercase drop-shadow-lg">
+          <h1 className="text-4xl sm:text-5xl font-black text-red-400 tracking-tight uppercase drop-shadow-lg">
             You Lost!
           </h1>
         </div>
 
-        <div className="bg-slate-800/90 border border-red-500/30 rounded-2xl px-8 py-5 w-full shadow-xl shadow-red-500/5">
+        <div className="bg-slate-800/90 border border-red-500/30 rounded-2xl px-5 sm:px-8 py-5 w-full shadow-xl shadow-red-500/5">
           <p className="text-slate-400 text-sm mb-3">Your punishment:</p>
           <p className="text-3xl font-black text-white">{punishmentText}</p>
           <p className="text-4xl mt-2">{punishment.emoji}</p>

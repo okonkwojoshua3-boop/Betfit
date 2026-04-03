@@ -413,7 +413,7 @@ export default function BetDetail() {
         {/* Top accent bar */}
         <div className="absolute top-0 left-0 right-0 h-px" style={{ background: liveData?.isLive ? 'linear-gradient(90deg,transparent,rgba(239,68,68,0.7),transparent)' : 'linear-gradient(90deg,transparent,rgba(34,214,114,0.4),transparent)' }} />
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Status row */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
@@ -432,11 +432,11 @@ export default function BetDetail() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex flex-col items-center gap-2 flex-1">
               <TeamLogo name={match.homeTeam.name} logo={match.homeTeam.logo ?? bet.homeTeamLogo} teamId={match.homeTeam.id} sport={match.sport} emoji={match.homeTeam.emoji} size="xl" />
-              <span className="font-display font-bold text-white text-center leading-tight">{match.homeTeam.name}</span>
+              <span className="font-display font-bold text-white text-center leading-tight text-sm sm:text-base">{match.homeTeam.name}</span>
               <span className="text-[11px] text-slate-600 font-medium tracking-widest uppercase">{match.homeTeam.shortCode}</span>
             </div>
 
-            <div className="flex-shrink-0 mx-4 text-center min-w-[120px]">
+            <div className="flex-shrink-0 mx-2 sm:mx-4 text-center min-w-[90px] sm:min-w-[120px]">
               {/* Status badge — above the score */}
               {matchIsActive && liveData?.statusText ? (
                 <div className="mb-2 flex justify-center">
@@ -467,7 +467,7 @@ export default function BetDetail() {
                 <div
                   className="font-score leading-none tracking-wider px-4 py-2 rounded-2xl"
                   style={{
-                    fontSize: '52px',
+                    fontSize: 'clamp(36px, 10vw, 52px)',
                     color: liveData?.isLive && !liveData.isHalfTime ? '#F87171' : '#F0F4FF',
                     background: liveData?.isLive && !liveData.isHalfTime ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.04)',
                     border: liveData?.isLive && !liveData.isHalfTime ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(255,255,255,0.06)',
@@ -482,7 +482,7 @@ export default function BetDetail() {
 
             <div className="flex flex-col items-center gap-2 flex-1">
               <TeamLogo name={match.awayTeam.name} logo={match.awayTeam.logo ?? bet.awayTeamLogo} teamId={match.awayTeam.id} sport={match.sport} emoji={match.awayTeam.emoji} size="xl" />
-              <span className="font-display font-bold text-white text-center leading-tight">{match.awayTeam.name}</span>
+              <span className="font-display font-bold text-white text-center leading-tight text-sm sm:text-base">{match.awayTeam.name}</span>
               <span className="text-[11px] text-slate-600 font-medium tracking-widest uppercase">{match.awayTeam.shortCode}</span>
             </div>
           </div>

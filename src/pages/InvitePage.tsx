@@ -235,19 +235,19 @@ export default function InvitePage() {
 
         {/* Teams VS */}
         <div className="flex items-center justify-center gap-4">
-          <div className="text-center flex-1">
+          <div className="text-center flex-1 min-w-0">
             <TeamLogo name={homeTeam.name} logo={homeTeam.logo} teamId={homeTeam.id} sport={bet.sport} emoji={homeTeam.emoji} size="xl" className="mb-2" />
-            <div className="font-bold text-white">{homeTeam.name}</div>
+            <div className="font-bold text-white text-sm leading-tight px-1 break-words">{homeTeam.name}</div>
             {creatorPickedHomeTeam && (
-              <div className="text-xs text-emerald-400 mt-1">{bet.creator.name}'s pick</div>
+              <div className="text-xs text-emerald-400 mt-1 truncate px-1">{bet.creator.name}'s pick</div>
             )}
           </div>
-          <div className="text-slate-500 font-bold text-lg px-2">VS</div>
-          <div className="text-center flex-1">
+          <div className="text-slate-500 font-bold text-lg px-2 shrink-0">VS</div>
+          <div className="text-center flex-1 min-w-0">
             <TeamLogo name={awayTeam.name} logo={awayTeam.logo} teamId={awayTeam.id} sport={bet.sport} emoji={awayTeam.emoji} size="xl" className="mb-2" />
-            <div className="font-bold text-white">{awayTeam.name}</div>
+            <div className="font-bold text-white text-sm leading-tight px-1 break-words">{awayTeam.name}</div>
             {!creatorPickedHomeTeam && (
-              <div className="text-xs text-emerald-400 mt-1">{bet.creator.name}'s pick</div>
+              <div className="text-xs text-emerald-400 mt-1 truncate px-1">{bet.creator.name}'s pick</div>
             )}
           </div>
         </div>
