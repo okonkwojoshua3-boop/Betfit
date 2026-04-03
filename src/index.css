@@ -5,11 +5,15 @@
 @layer base {
   * {
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
   }
 
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Prevent font size inflation on orientation change */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
@@ -18,6 +22,24 @@
     background-color: #080C14;
     color: #E8EDF5;
     min-height: 100vh;
+    /* Prevent horizontal overflow on mobile */
+    overflow-x: hidden;
+  }
+
+  /* Ensure all images are responsive */
+  img, video {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Better touch targets for interactive elements */
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Safe area padding for notched phones */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   ::-webkit-scrollbar {

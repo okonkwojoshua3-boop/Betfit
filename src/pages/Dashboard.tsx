@@ -30,8 +30,8 @@ export default function Dashboard() {
     <div className="max-w-4xl mx-auto px-4 py-8">
 
       {/* Hero */}
-      <div className="mb-8 animate-fade-up animate-fill-both">
-        <h1 className="font-display text-4xl font-bold text-white mb-1 tracking-tight">
+      <div className="mb-6 animate-fade-up animate-fill-both">
+        <h1 className="font-display text-3xl sm:text-4xl font-bold text-white mb-1 tracking-tight">
           Bet <span className="gradient-text">&amp;</span> Sweat
         </h1>
         <p className="text-slate-500 text-sm">
@@ -112,10 +112,10 @@ export default function Dashboard() {
                   }}
                 >
                   <div className="flex items-start justify-between gap-3 mb-3">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <SportIcon sport={match?.sport ?? bet.sport ?? 'football'} size="sm" />
-                        <span className="text-white font-semibold text-sm">
+                        <span className="text-white font-semibold text-sm truncate">
                           {homeTeamName} vs {awayTeamName}
                         </span>
                       </div>
