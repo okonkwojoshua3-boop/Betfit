@@ -41,7 +41,7 @@ export interface PunishmentAssignment {
   reps: number
 }
 
-export type BetStatus = 'pending' | 'active' | 'punishment_pending' | 'completed'
+export type BetStatus = 'pending' | 'active' | 'punishment_pending' | 'completed' | 'cancel_requested' | 'cancelled'
 
 export interface Player {
   id: string

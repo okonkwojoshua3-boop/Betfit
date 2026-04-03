@@ -17,6 +17,14 @@ const CONFIG: Record<BetStatus, { label: string; className: string }> = {
     label: '✓ Done',
     className: 'bg-white/5 text-slate-400 border border-white/8',
   },
+  cancel_requested: {
+    label: '⏸ Cancelling',
+    className: 'bg-orange-500/10 text-orange-400 border border-orange-500/20',
+  },
+  cancelled: {
+    label: '✕ Cancelled',
+    className: 'bg-white/5 text-slate-500 border border-white/8',
+  },
 }
 
 export default function Badge({ status }: { status: BetStatus }) {

@@ -333,7 +333,7 @@ function WinnerProofReview({
 export default function BetDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getBetById, resolveBet, acknowledgePunishment } = useBets()
+  const { getBetById, resolveBet, acknowledgePunishment, requestCancel, approveCancel, declineCancel } = useBets()
   const { profile } = useAuth()
 
   const bet = id ? getBetById(id) : undefined
@@ -395,11 +395,54 @@ export default function BetDetail() {
     return <PunishmentBanner bet={bet} match={match} punishmentText={punishmentText} onDone={() => setShowBanner(false)} />
   }
 
+  const isCreator = profile?.id === bet.creatorId
+  const otherParticipants = participants.filter((p) => p.userId !== profile?.id)
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <button onClick={() => navigate(-1)} className="text-slate-500 hover:text-white text-sm mb-6 flex items-center gap-1.5 transition-colors">
         ← Back
       </button>
+
+      {/* Cancel request banner */}
+      {bet.status === 'cancel_requested' && (
+        <div
+          className="rounded-2xl p-4 mb-4 animate-fade-up animate-fill-both"
+          style={{ background: 'rgba(251,146,60,0.06)', border: '1px solid rgba(251,146,60,0.2)' }}
+        >
+          {isCreator ? (
+            <>
+              <p className="text-sm font-semibold text-orange-400 mb-1">⏸ Cancellation Requested</p>
+              <p className="text-xs text-slate-400 mb-3">Waiting for other players to approve. They've been notified.</p>
+              <button
+                onClick={() => declineCancel(bet.id, profile!.id, profile!.username)}
+                className="text-xs font-semibold text-slate-400 hover:text-white bg-white/5 hover:bg-white/8 border border-white/10 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Withdraw Request
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-semibold text-orange-400 mb-1">⏸ Cancel Requested</p>
+              <p className="text-xs text-slate-400 mb-3">The bet creator wants to cancel this bet. Do you agree?</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => approveCancel(bet.id, bet.creatorId!, profile!.username)}
+                  className="flex-1 text-xs font-bold text-white bg-red-500/80 hover:bg-red-500 border border-red-500/30 py-2 rounded-xl transition-colors"
+                >
+                  Approve Cancel
+                </button>
+                <button
+                  onClick={() => declineCancel(bet.id, bet.creatorId!, profile!.username)}
+                  className="flex-1 text-xs font-semibold text-slate-300 bg-white/5 hover:bg-white/8 border border-white/10 py-2 rounded-xl transition-colors"
+                >
+                  Decline
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Match header — broadcast style */}
       <div
@@ -582,6 +625,18 @@ export default function BetDetail() {
             punishmentText={punishmentText}
             onApproved={() => acknowledgePunishment(bet.id)}
           />
+        </div>
+      )}
+
+      {/* Cancel bet — creator only, active bets */}
+      {bet.status === 'active' && isCreator && (
+        <div className="mb-4">
+          <button
+            onClick={() => requestCancel(bet.id, otherParticipants)}
+            className="w-full text-xs text-slate-600 hover:text-red-400 py-2 transition-colors"
+          >
+            Request to cancel this bet
+          </button>
         </div>
       )}
 

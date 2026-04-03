@@ -1,15 +1,20 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Bet, Match, Sport } from '../../types'
 import { getMatchById } from '../../data/matches'
 import { getPunishmentById } from '../../data/punishments'
 import { useLiveScore } from '../../hooks/useLiveScore'
+import { useBets } from '../../store/BetContext'
+import { useAuth } from '../../store/AuthContext'
 import Badge from '../ui/Badge'
 import SportIcon from '../ui/SportIcon'
 import TeamLogo from '../ui/TeamLogo'
 
 export default function BetCard({ bet }: { bet: Bet }) {
   const navigate = useNavigate()
+  const { declineBet, requestCancel } = useBets()
+  const { profile } = useAuth()
+  const [confirmCancel, setConfirmCancel] = useState(false)
   const storedMatch = getMatchById(bet.matchId)
   const punishment = getPunishmentById(bet.punishment.punishmentId)
   const betSettled = bet.status === 'punishment_pending' || bet.status === 'completed'
@@ -95,6 +100,19 @@ export default function BetCard({ bet }: { bet: Bet }) {
 
   const participants = bet.participants ?? []
   const isPunishmentDue = bet.status === 'punishment_pending'
+  const isCreator = bet.creatorId === profile?.id
+  const isCancellable = isCreator && (bet.status === 'pending' || bet.status === 'active')
+
+  async function handleCancelConfirm(e: React.MouseEvent) {
+    e.stopPropagation()
+    const others = participants.filter((p) => p.userId !== profile?.id)
+    if (others.length === 0) {
+      await declineBet(bet.id)
+    } else {
+      await requestCancel(bet.id, others)
+    }
+    setConfirmCancel(false)
+  }
 
   return (
     <div
@@ -215,10 +233,46 @@ export default function BetCard({ bet }: { bet: Bet }) {
           {isPunishmentDue && bet.losingTeamId !== 'draw' && (
             <span className="text-[11px] text-red-400 font-bold tracking-wide animate-pulse">LOSERS OWE</span>
           )}
-          {!isPunishmentDue && (
+          {!isPunishmentDue && !isCancellable && (
             <span className="text-[11px] text-slate-600 group-hover:text-slate-400 transition-colors">View →</span>
           )}
+          {isCancellable && !confirmCancel && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmCancel(true) }}
+              className="text-[11px] text-slate-600 hover:text-red-400 transition-colors"
+            >
+              Cancel
+            </button>
+          )}
         </div>
+
+        {/* Inline cancel confirmation */}
+        {confirmCancel && (
+          <div
+            className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-xs text-slate-400">
+              {participants.filter((p) => p.userId !== profile?.id).length === 0
+                ? 'Cancel this bet?'
+                : 'Request cancellation? Others will be notified.'}
+            </span>
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirmCancel(false) }}
+                className="text-xs text-slate-500 hover:text-white px-2 py-1 rounded-lg bg-white/5 transition-colors"
+              >
+                No
+              </button>
+              <button
+                onClick={handleCancelConfirm}
+                className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded-lg bg-red-500/10 border border-red-500/20 transition-colors"
+              >
+                Yes, cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

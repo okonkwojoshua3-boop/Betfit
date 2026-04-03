@@ -11,6 +11,9 @@ import {
   declineBet as dbDeclineBet,
   resolveBet as dbResolveBet,
   completeBet as dbCompleteBet,
+  requestCancelBet as dbRequestCancel,
+  approveCancelBet as dbApproveCancel,
+  declineCancelBet as dbDeclineCancel,
 } from '../services/betService'
 
 export function useBetStore(userId: string | undefined) {
@@ -105,8 +108,28 @@ export function useBetStore(userId: string | undefined) {
     setBets((prev) => prev.map((b) => (b.id === betId ? { ...b, status: 'completed' } : b)))
   }, [])
 
+  const requestCancel = useCallback(async (betId: string, otherParticipants: { userId: string; username: string }[]) => {
+    await dbRequestCancel(betId)
+    setBets((prev) => prev.map((b) => (b.id === betId ? { ...b, status: 'cancel_requested' } : b)))
+    for (const p of otherParticipants) {
+      createNotification(p.userId, betId, `The bet creator wants to cancel this bet. Open it to approve or decline.`, '', '').catch(console.error)
+    }
+  }, [])
+
+  const approveCancel = useCallback(async (betId: string, requesterId: string, approverName: string) => {
+    await dbApproveCancel(betId)
+    setBets((prev) => prev.filter((b) => b.id !== betId))
+    createNotification(requesterId, betId, `${approverName} approved the cancellation. The bet has been removed.`, '', '').catch(console.error)
+  }, [])
+
+  const declineCancel = useCallback(async (betId: string, requesterId: string, declinerName: string) => {
+    await dbDeclineCancel(betId)
+    setBets((prev) => prev.map((b) => (b.id === betId ? { ...b, status: 'active' } : b)))
+    createNotification(requesterId, betId, `${declinerName} declined the cancellation. The bet is still active.`, '', '').catch(console.error)
+  }, [])
+
   const getActiveBets = useCallback(
-    () => bets.filter((b) => b.status === 'active' || b.status === 'punishment_pending'),
+    () => bets.filter((b) => b.status === 'active' || b.status === 'punishment_pending' || b.status === 'cancel_requested'),
     [bets],
   )
 
@@ -133,6 +156,9 @@ export function useBetStore(userId: string | undefined) {
     declineBet,
     resolveBet,
     acknowledgePunishment,
+    requestCancel,
+    approveCancel,
+    declineCancel,
     getActiveBets,
     getPendingBets,
     getCompletedBets,

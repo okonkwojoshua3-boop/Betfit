@@ -177,6 +177,28 @@ export async function resolveBet(
   if (error) throw error
 }
 
+// ── Cancel flow ───────────────────────────────────────────────────────────────
+export async function requestCancelBet(betId: string): Promise<void> {
+  const { error } = await supabase
+    .from('bets')
+    .update({ status: 'cancel_requested' })
+    .eq('id', betId)
+  if (error) throw error
+}
+
+export async function approveCancelBet(betId: string): Promise<void> {
+  const { error } = await supabase.from('bets').delete().eq('id', betId)
+  if (error) throw error
+}
+
+export async function declineCancelBet(betId: string): Promise<void> {
+  const { error } = await supabase
+    .from('bets')
+    .update({ status: 'active' })
+    .eq('id', betId)
+  if (error) throw error
+}
+
 export async function completeBet(betId: string): Promise<void> {
   const { error } = await supabase
     .from('bets')
