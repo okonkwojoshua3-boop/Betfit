@@ -40,6 +40,11 @@ export function useProof(betId: string) {
       setUploadError('Not signed in. Please refresh and try again.')
       return false
     }
+    const MAX_MB = 50
+    if (file.size > MAX_MB * 1024 * 1024) {
+      setUploadError(`File is too large (${(file.size / 1024 / 1024).toFixed(0)}MB). Max is ${MAX_MB}MB. Try compressing the video first.`)
+      return false
+    }
     setUploading(true)
     setUploadError(null)
     try {
@@ -47,13 +52,15 @@ export function useProof(betId: string) {
       setProof(p)
       return true
     } catch (err) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : typeof err === 'object' && err !== null && 'message' in err
-            ? String((err as Record<string, unknown>).message)
-            : 'Upload failed. Please try again.'
-      setUploadError(msg || 'Upload failed. Please try again.')
+      console.error('Proof upload failed:', err)
+      const e = err as Record<string, unknown>
+      const msg = (
+        err instanceof Error ? err.message
+        : typeof e?.message === 'string' ? e.message
+        : typeof e?.error_description === 'string' ? e.error_description
+        : null
+      )
+      setUploadError(msg || 'Upload failed — please check your connection and try again.')
       return false
     } finally {
       setUploading(false)
