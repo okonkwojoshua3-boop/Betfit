@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PUNISHMENTS } from '../data/punishments'
+import { PUNISHMENTS, formatPunishment } from '../data/punishments'
 import { useBets } from '../store/BetContext'
 import { useAuth } from '../store/AuthContext'
 import { useLiveMatches } from '../hooks/useLiveMatches'
+import { fetchFixturesForDate } from '../lib/sportsApi'
 import { saveMatch } from '../store/matchStore'
 import { supabase } from '../lib/supabase'
 import { searchProfiles } from '../services/betService'
 import { createNotification } from '../services/notificationService'
+import { sendBetEmail, emailBetChallenged } from '../services/emailService'
 import type { Match, Sport } from '../types'
 import SportIcon from '../components/ui/SportIcon'
 import TeamLogo from '../components/ui/TeamLogo'
@@ -55,6 +57,37 @@ export default function CreateBet() {
   const [createError, setCreateError] = useState<string | null>(null)
   const [matchSearch, setMatchSearch] = useState('')
 
+  // Date picker — today + next 6 days
+  const todayDateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  const dateTabs = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() + i)
+    const ds = d.toISOString().slice(0, 10).replace(/-/g, '')
+    const lbl = i === 0 ? 'Today' : i === 1 ? 'Tomorrow'
+      : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+    return { dateStr: ds, label: lbl }
+  })
+  const [selectedDateStr, setSelectedDateStr] = useState(todayDateStr)
+  const [futureFix, setFutureFix] = useState<{ football: Match[]; basketball: Match[] } | null>(null)
+  const [futureLoading, setFutureLoading] = useState(false)
+
+  useEffect(() => {
+    if (selectedDateStr === todayDateStr) {
+      setFutureFix(null)
+      return
+    }
+    const cacheKey = `betfit_fixtures_v1_${selectedDateStr}`
+    const cached = sessionStorage.getItem(cacheKey)
+    if (cached) {
+      try { setFutureFix(JSON.parse(cached)); return } catch { /* bad cache */ }
+    }
+    setFutureLoading(true)
+    fetchFixturesForDate(selectedDateStr)
+      .then((data) => { sessionStorage.setItem(cacheKey, JSON.stringify(data)); setFutureFix(data) })
+      .catch(() => setFutureFix({ football: [], basketball: [] }))
+      .finally(() => setFutureLoading(false))
+  }, [selectedDateStr, todayDateStr])
+
   useEffect(() => {
     if (!opponentQuery.trim() || selectedOpponent) {
       setOpponentResults([])
@@ -75,19 +108,17 @@ export default function CreateBet() {
   const update = (patch: Partial<WizardState>) =>
     setState((prev) => ({ ...prev, ...patch }))
 
-  // Fallback static matches (relative dates, never stale)
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
+  const isToday = selectedDateStr === todayDateStr
 
   const liveList = [...liveMatches.football, ...liveMatches.basketball].filter(
     (m) => m.status === 'live' || new Date(m.scheduledAt) >= todayStart,
   )
 
-  const allMatches: Match[] = liveMatches.loading
-    ? []
-    : liveList.length > 0
-      ? liveList
-      : [] // empty means "use fallback" below — but we already handle this
+  const allMatches: Match[] = isToday
+    ? (liveMatches.loading ? [] : liveList)
+    : (futureFix ? [...futureFix.football, ...futureFix.basketball] : [])
 
   const sportFiltered =
     state.sportFilter === 'all'
@@ -157,6 +188,19 @@ export default function CreateBet() {
             '',
             '',
           ).catch(console.error)
+          const punishmentText = selectedPunishment
+            ? formatPunishment(selectedPunishment, state.punishmentReps)
+            : `${state.punishmentReps} reps`
+          sendBetEmail({
+            userIds: [selectedOpponent.id],
+            subject: `${profile.username} challenged you to a bet!`,
+            html: emailBetChallenged({
+              creatorName: profile.username,
+              matchName: `${selectedMatch.homeTeam.name} vs ${selectedMatch.awayTeam.name}`,
+              punishment: punishmentText,
+              betId: created.id,
+            }),
+          }).catch(console.error)
           setNotifiedOpponent(true)
         }
       } else {
@@ -426,18 +470,44 @@ export default function CreateBet() {
         <div className="animate-slide-up">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-white">Choose a match</h2>
-            {liveMatches.loading && (
+            {(isToday ? liveMatches.loading : futureLoading) && (
               <span className="text-xs text-emerald-400 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
                 Loading…
               </span>
             )}
-            {!liveMatches.loading && !liveMatches.error && (
+            {isToday && !liveMatches.loading && !liveMatches.error && (
               <span className="text-xs text-emerald-500 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                 Live
               </span>
             )}
+          </div>
+
+          {/* Date picker */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 mb-4 -mx-1 px-1">
+            {dateTabs.map(({ dateStr, label }) => {
+              const active = dateStr === selectedDateStr
+              return (
+                <button
+                  key={dateStr}
+                  onClick={() => {
+                    setSelectedDateStr(dateStr)
+                    update({ selectedMatchId: '', creatorPickId: '' })
+                    setMatchSearch('')
+                  }}
+                  className="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200"
+                  style={{
+                    background: active ? 'linear-gradient(135deg,#22D672,#16A350)' : 'rgba(255,255,255,0.05)',
+                    color: active ? '#080C14' : 'rgba(255,255,255,0.45)',
+                    border: active ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: active ? '0 2px 8px rgba(34,214,114,0.25)' : 'none',
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
           </div>
 
           <div className="flex gap-2 mb-3">

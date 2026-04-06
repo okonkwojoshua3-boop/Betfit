@@ -232,6 +232,10 @@ function espnMapEvent(event: any, sport: Sport): Match | null {
   } catch { return null }
 }
 
+export async function fetchFixturesForDate(dateStr: string): Promise<{ football: Match[]; basketball: Match[] }> {
+  return fetchEspnUpcoming(dateStr)
+}
+
 async function fetchEspnUpcoming(dateStr: string): Promise<{ football: Match[]; basketball: Match[] }> {
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
