@@ -5,6 +5,14 @@ import { supabase } from '../lib/supabase'
 import { getPunishmentById, formatPunishment } from '../data/punishments'
 import { createNotification } from '../services/notificationService'
 import {
+  sendBetEmail,
+  emailBetResultLost,
+  emailBetResultWon,
+  emailCancelRequested,
+  emailCancelApproved,
+  emailCancelDeclined,
+} from '../services/emailService'
+import {
   fetchBets,
   createBet as dbCreateBet,
   acceptBet as dbAcceptBet,
@@ -73,6 +81,9 @@ export function useBetStore(userId: string | undefined) {
       const punishmentText = punishment
         ? formatPunishment(punishment, bet.punishment.reps)
         : `${bet.punishment.reps} reps`
+      const matchName = `${bet.homeTeamName ?? ''} vs ${bet.awayTeamName ?? ''}`.trim()
+      const loserIds: string[] = []
+      const winnerIds: string[] = []
       for (const p of bet.participants) {
         const isLoser = p.teamPickId === losingTeamId
         createNotification(
@@ -84,6 +95,22 @@ export function useBetStore(userId: string | undefined) {
           isLoser ? p.username : '',
           isLoser ? punishmentText : '',
         ).catch(console.error)
+        if (isLoser) loserIds.push(p.userId)
+        else winnerIds.push(p.userId)
+      }
+      if (loserIds.length) {
+        sendBetEmail({
+          userIds: loserIds,
+          subject: `You lost the bet — time to do your punishment`,
+          html: emailBetResultLost({ punishment: punishmentText, matchResult: matchName, betId }),
+        }).catch(console.error)
+      }
+      if (winnerIds.length) {
+        sendBetEmail({
+          userIds: winnerIds,
+          subject: `You won the bet! 🏆`,
+          html: emailBetResultWon({ matchResult: matchName, betId }),
+        }).catch(console.error)
       }
     }
 
@@ -110,23 +137,46 @@ export function useBetStore(userId: string | undefined) {
 
   const requestCancel = useCallback(async (betId: string, otherParticipants: { userId: string; username: string }[]) => {
     await dbRequestCancel(betId)
+    const bet = bets.find((b) => b.id === betId)
+    const requesterName = bet?.creator.name ?? 'The creator'
+    const matchName = bet ? `${bet.homeTeamName ?? ''} vs ${bet.awayTeamName ?? ''}`.trim() : 'your match'
     setBets((prev) => prev.map((b) => (b.id === betId ? { ...b, status: 'cancel_requested' } : b)))
     for (const p of otherParticipants) {
       createNotification(p.userId, betId, `The bet creator wants to cancel this bet. Open it to approve or decline.`, '', '').catch(console.error)
     }
-  }, [])
+    const otherIds = otherParticipants.map((p) => p.userId)
+    if (otherIds.length) {
+      sendBetEmail({
+        userIds: otherIds,
+        subject: `${requesterName} wants to cancel the bet`,
+        html: emailCancelRequested({ requesterName, matchName, betId }),
+      }).catch(console.error)
+    }
+  }, [bets])
 
   const approveCancel = useCallback(async (betId: string, requesterId: string, approverName: string) => {
     await dbApproveCancel(betId)
     setBets((prev) => prev.filter((b) => b.id !== betId))
     createNotification(requesterId, betId, `${approverName} approved the cancellation. The bet has been removed.`, '', '').catch(console.error)
+    sendBetEmail({
+      userIds: [requesterId],
+      subject: `${approverName} approved the cancellation`,
+      html: emailCancelApproved({ approverName }),
+    }).catch(console.error)
   }, [])
 
   const declineCancel = useCallback(async (betId: string, requesterId: string, declinerName: string) => {
     await dbDeclineCancel(betId)
+    const bet = bets.find((b) => b.id === betId)
+    const matchName = bet ? `${bet.homeTeamName ?? ''} vs ${bet.awayTeamName ?? ''}`.trim() : 'your match'
     setBets((prev) => prev.map((b) => (b.id === betId ? { ...b, status: 'active' } : b)))
     createNotification(requesterId, betId, `${declinerName} declined the cancellation. The bet is still active.`, '', '').catch(console.error)
-  }, [])
+    sendBetEmail({
+      userIds: [requesterId],
+      subject: `${declinerName} declined the cancellation`,
+      html: emailCancelDeclined({ declinerName, matchName, betId }),
+    }).catch(console.error)
+  }, [bets])
 
   const getActiveBets = useCallback(
     () => bets.filter((b) => b.status === 'active' || b.status === 'punishment_pending' || b.status === 'cancel_requested'),

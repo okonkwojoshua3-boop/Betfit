@@ -7,6 +7,7 @@ import { getPunishmentById, formatPunishment } from '../data/punishments'
 import { useProof } from '../hooks/useProof'
 import { useLiveScore } from '../hooks/useLiveScore'
 import { createNotification } from '../services/notificationService'
+import { sendBetEmail, emailProofRejected } from '../services/emailService'
 import PunishmentBanner from '../components/bets/PunishmentBanner'
 import Badge from '../components/ui/Badge'
 import SportIcon from '../components/ui/SportIcon'
@@ -227,6 +228,11 @@ function WinnerProofReview({
         punishmentText,
       ).catch(console.error)
     }
+    sendBetEmail({
+      userIds: loserUserIds,
+      subject: 'Your proof was rejected — please re-upload',
+      html: emailProofRejected({ reason: rejectNote.trim(), punishment: punishmentText, betId }),
+    }).catch(console.error)
     setShowRejectInput(false)
     setRejectNote('')
   }

@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase'
 import type { Bet, BetParticipant, MatchResult } from '../types'
 import { createNotification } from './notificationService'
+import { sendBetEmail, emailBetAccepted } from './emailService'
 
 // ── Row mappers ───────────────────────────────────────────────────────────────
 function rowToBet(row: Record<string, unknown>): Bet {
@@ -283,6 +284,12 @@ export async function acceptInvite(
       '',
       '',
     ).catch(console.error)
+    const matchName = [betData.home_team_name, betData.away_team_name].filter(Boolean).join(' vs ') || 'your match'
+    sendBetEmail({
+      userIds: [creatorId],
+      subject: `${username} accepted your bet!`,
+      html: emailBetAccepted({ joinerName: username, matchName, betId }),
+    }).catch(console.error)
   }
 
   return rowToBet({
