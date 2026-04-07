@@ -236,11 +236,43 @@ export async function fetchFixturesForDate(dateStr: string): Promise<{ football:
   return fetchEspnUpcoming(dateStr)
 }
 
+// ── AllSports scheduled-events — returns ALL matches for a sport in one request ─
+// dateStr format: YYYYMMDD
+async function fetchAllSportsScheduled(dateStr: string): Promise<{ football: Match[]; basketball: Match[] }> {
+  // AllSports expects YYYY-MM-DD
+  const dateFmt = `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`
+  const [fbData, bbData] = await Promise.all([
+    fetch(`${ALLSPORTS_BASE}/api/sport/football/scheduled-events/${dateFmt}`, { headers: allSportsHeaders() })
+      .then(r => r.ok ? r.json() : { events: [] })
+      .catch(() => ({ events: [] })),
+    fetch(`${ALLSPORTS_BASE}/api/sport/basketball/scheduled-events/${dateFmt}`, { headers: allSportsHeaders() })
+      .then(r => r.ok ? r.json() : { events: [] })
+      .catch(() => ({ events: [] })),
+  ])
+
+  if (import.meta.env.DEV) {
+    console.group(`🗓 AllSports scheduled [${dateFmt}]`)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    console.log('⚽ raw football events:', (fbData.events ?? []).length, (fbData.events ?? []).slice(0, 3).map((e: any) => `${e.homeTeam?.name} v ${e.awayTeam?.name}`))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    console.log('🏀 raw basketball events:', (bbData.events ?? []).length, (bbData.events ?? []).slice(0, 3).map((e: any) => `${e.homeTeam?.name} v ${e.awayTeam?.name}`))
+    console.groupEnd()
+  }
+
+  return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    football: (fbData.events ?? []).map((e: any) => mapAllSportsEvent(e, 'football')),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    basketball: (bbData.events ?? []).map((e: any) => mapAllSportsEvent(e, 'basketball')),
+  }
+}
+
 async function fetchEspnUpcoming(dateStr: string): Promise<{ football: Match[]; basketball: Match[] }> {
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
 
-  const [footballResults, basketballMatches] = await Promise.all([
+  // Run ESPN (multi-league) + AllSports scheduled (single request, all-leagues) in parallel
+  const [footballResults, basketballMatches, allSportsScheduled] = await Promise.all([
     Promise.all(
       ESPN_TODAY_FOOTBALL_LEAGUES.map(async (league) => {
         try {
@@ -263,24 +295,66 @@ async function fetchEspnUpcoming(dateStr: string): Promise<{ football: Match[]; 
         } catch { return [] }
       }),
     ).then(results => results.flat()),
+    fetchAllSportsScheduled(dateStr),
   ])
 
-  // Dedup football and filter to upcoming/live only
+  // Dedup ESPN football by ID
   const footballMap = new Map<string, Match>()
   for (const m of footballResults.flat()) footballMap.set(m.id, m)
-  const upcoming = (m: Match) => m.status !== 'finished' && new Date(m.scheduledAt) >= todayStart
 
-  return {
-    football: Array.from(footballMap.values()).filter(upcoming),
-    basketball: basketballMatches.filter(upcoming),
+  // Supplement with AllSports scheduled football — add matches not already in ESPN results
+  // (team-name dedup to avoid same fixture appearing twice)
+  const espnFootballKeys = new Set(
+    Array.from(footballMap.values()).map(m => `${m.homeTeam.name}|${m.awayTeam.name}`)
+  )
+  for (const m of allSportsScheduled.football) {
+    const key = `${m.homeTeam.name}|${m.awayTeam.name}`
+    if (!espnFootballKeys.has(key)) {
+      footballMap.set(m.id, m)
+      espnFootballKeys.add(key)
+    }
   }
+
+  // Supplement basketball similarly
+  const espnBbKeys = new Set(basketballMatches.map(m => `${m.homeTeam.name}|${m.awayTeam.name}`))
+  const mergedBasketball = [...basketballMatches]
+  for (const m of allSportsScheduled.basketball) {
+    const key = `${m.homeTeam.name}|${m.awayTeam.name}`
+    if (!espnBbKeys.has(key)) {
+      mergedBasketball.push(m)
+      espnBbKeys.add(key)
+    }
+  }
+
+  // Filter: exclude finished, exclude matches before today (for future-date fetches all should pass)
+  const notFinished = (m: Match) => m.status !== 'finished' && new Date(m.scheduledAt) >= todayStart
+
+  const football = Array.from(footballMap.values()).filter(notFinished)
+  const basketball = mergedBasketball.filter(notFinished)
+
+  if (import.meta.env.DEV) {
+    console.group(`📅 fetchEspnUpcoming [${dateStr}]`)
+    const espnPerLeague = Object.fromEntries(
+      ESPN_TODAY_FOOTBALL_LEAGUES.map((l, i) => [l, footballResults[i]?.length ?? 0] as [string, number]).filter(([, n]) => n > 0)
+    )
+    console.log('ESPN ⚽ by league (non-zero only):', espnPerLeague)
+    console.log(`ESPN ⚽ raw total: ${footballResults.flat().length}, AllSports ⚽ scheduled: ${allSportsScheduled.football.length}`)
+    console.log(`After merge+dedup: ⚽ ${football.length} football, 🏀 ${basketball.length} basketball`)
+    console.log('Filter removed (finished or past):', (Array.from(footballMap.values()).length - football.length) + (mergedBasketball.length - basketball.length), 'matches')
+    console.groupEnd()
+  }
+
+  return { football, basketball }
 }
 
 // ── fetchAllSportsLive — AllSports live only (cheap, used for polling) ────────
 export async function fetchAllSportsLive(): Promise<{ football: Match[]; basketball: Match[] }> {
   try {
     const res = await fetch(`${ALLSPORTS_BASE}/api/matches/live`, { headers: allSportsHeaders() })
-    if (!res.ok) return { football: [], basketball: [] }
+    if (!res.ok) {
+      if (import.meta.env.DEV) console.warn('⚡ AllSports live failed:', res.status, res.statusText)
+      return { football: [], basketball: [] }
+    }
     const data = await res.json()
     const events: unknown[] = data.events ?? []
     const football: Match[] = []
@@ -292,8 +366,23 @@ export async function fetchAllSportsLive(): Promise<{ football: Match[]; basketb
       if (sportSlug === 'football') football.push(mapAllSportsEvent(ev, 'football'))
       else if (sportSlug === 'basketball') basketball.push(mapAllSportsEvent(ev, 'basketball'))
     }
+    if (import.meta.env.DEV) {
+      console.group('⚡ AllSports live')
+      console.log(`Total events: ${events.length} (⚽ ${football.length}, 🏀 ${basketball.length})`)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const byLeague = (events as any[]).reduce<Record<string, number>>((acc, e) => {
+        const l = e.tournament?.name ?? 'unknown'
+        acc[l] = (acc[l] ?? 0) + 1
+        return acc
+      }, {})
+      console.log('By league:', byLeague)
+      console.groupEnd()
+    }
     return { football, basketball }
-  } catch { return { football: [], basketball: [] } }
+  } catch (err) {
+    if (import.meta.env.DEV) console.error('⚡ AllSports live error:', err)
+    return { football: [], basketball: [] }
+  }
 }
 
 // ── Merge AllSports live with ESPN upcoming ───────────────────────────────────
