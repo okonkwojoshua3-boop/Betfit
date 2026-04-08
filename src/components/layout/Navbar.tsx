@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useBets } from '../../store/BetContext'
 import { useAuth } from '../../store/AuthContext'
+import Avatar from '../ui/Avatar'
 
 export default function Navbar() {
   const { getActiveBets, getPendingBets } = useBets()
-  const { profile, signOut } = useAuth()
+  const { profile } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
 
   const activeBets = getActiveBets()
   const pendingBets = getPendingBets()
@@ -70,12 +72,11 @@ export default function Navbar() {
 
             {profile && (
               <button
-                onClick={signOut}
-                title={`Signed in as ${profile.username} — click to sign out`}
-                className="ml-2 w-8 h-8 rounded-full border border-white/10 flex items-center justify-center font-display font-bold text-sm text-white transition-all duration-200 hover:border-white/20 hover:scale-105"
-                style={{ background: 'linear-gradient(135deg, #1A2840, #111D30)' }}
+                onClick={() => navigate('/profile')}
+                title={`Profile: ${profile.username}`}
+                className="ml-2 rounded-full transition-all duration-200 hover:scale-105 hover:ring-2 hover:ring-neon-green/40"
               >
-                {profile.username[0].toUpperCase()}
+                <Avatar url={profile.avatar_url} username={profile.username} size="md" />
               </button>
             )}
           </div>
@@ -151,16 +152,18 @@ export default function Navbar() {
           {profile && (
             <>
               <div className="h-px bg-white/[0.06] mx-1 my-2" />
-              <button
-                onClick={() => { signOut(); setMenuOpen(false) }}
-                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm text-slate-400 hover:bg-white/5 hover:text-white transition-colors"
+              <NavLink
+                to="/profile"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                    isActive ? 'bg-neon-green/8 text-neon-green' : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                  }`
+                }
               >
-                <span className="w-7 h-7 rounded-full border border-white/10 flex items-center justify-center font-bold text-xs text-white" style={{ background: 'linear-gradient(135deg,#1A2840,#111D30)' }}>
-                  {profile.username[0].toUpperCase()}
-                </span>
+                <Avatar url={profile.avatar_url} username={profile.username} size="sm" />
                 <span className="flex-1 text-left">{profile.username}</span>
-                <span className="text-xs text-slate-600">Sign out</span>
-              </button>
+                <span className="text-xs text-slate-600">Profile →</span>
+              </NavLink>
             </>
           )}
         </div>

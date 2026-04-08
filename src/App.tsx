@@ -9,6 +9,7 @@ import CreateBet from './pages/CreateBet'
 import BetDetail from './pages/BetDetail'
 import History from './pages/History'
 import Leaderboard from './pages/Leaderboard'
+import Profile from './pages/Profile'
 import LoginPage from './pages/auth/LoginPage'
 import AuthCallback from './pages/auth/AuthCallback'
 import InvitePage from './pages/InvitePage'
@@ -41,6 +42,7 @@ function AppContent() {
           <Route path="/bets/:id" element={<BetDetail />} />
           <Route path="/history" element={<History />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

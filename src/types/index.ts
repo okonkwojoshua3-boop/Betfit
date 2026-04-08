@@ -84,6 +84,7 @@ export interface BetParticipant {
 export interface LeaderboardEntry {
   userId: string
   username: string
+  avatarUrl?: string | null
   wins: number
   losses: number
   draws: number

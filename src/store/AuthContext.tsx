@@ -14,6 +14,11 @@ export interface Profile {
   username: string
   avatar_url: string | null
   created_at: string
+  bio?: string | null
+  notifications_enabled?: boolean
+  favourite_team?: string | null
+  favourite_sport?: string | null
+  updated_at?: string | null
 }
 
 interface AuthStore {
@@ -22,6 +27,7 @@ interface AuthStore {
   loading: boolean
   signInWithGoogle: () => Promise<string | null>
   signOut: () => Promise<void>
+  refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthStore | null>(null)
@@ -66,8 +72,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }, [])
 
+  const refreshProfile = useCallback(async () => {
+    if (!user) return
+    await fetchProfile(user.id)
+  }, [user])
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

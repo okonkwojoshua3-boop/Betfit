@@ -1,5 +1,6 @@
 import { useLeaderboard } from '../hooks/useLeaderboard'
 import { useAuth } from '../store/AuthContext'
+import Avatar from '../components/ui/Avatar'
 import type { LeaderboardEntry } from '../types'
 
 function TrophyIcon({ size = 22, className = '' }: { size?: number; className?: string }) {
@@ -116,6 +117,10 @@ function PodiumCard({
 
       <div className={`${isFirst ? 'text-4xl' : 'text-2xl'} leading-none mb-2`}>{cfg.icon}</div>
 
+      <div className="mb-2">
+        <Avatar url={entry.avatarUrl} username={entry.username} size={isFirst ? 'md' : 'sm'} />
+      </div>
+
       <p
         className={`font-display font-bold tracking-tight leading-tight break-all ${isFirst ? 'text-sm' : 'text-xs'} ${cfg.nameColor}`}
         style={{ maxWidth: '100%', wordBreak: 'break-word' }}
@@ -185,11 +190,14 @@ function LeaderboardRow({
       )}
 
       <div className="flex items-center gap-3">
-        <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
-        >
-          <span className="font-score text-slate-400 text-lg leading-none">#{rank + 1}</span>
+        <div className="flex flex-col items-center gap-1 shrink-0">
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            <span className="font-score text-slate-500 text-xs leading-none">#{rank + 1}</span>
+          </div>
+          <Avatar url={entry.avatarUrl} username={entry.username} size="sm" />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -262,9 +270,12 @@ function PersonalCard({ entry, rank }: { entry: LeaderboardEntry; rank: number }
       <div className="absolute top-0 left-0 bottom-0 w-0.5 rounded-l-2xl" style={{ background: 'rgba(34,214,114,0.6)' }} />
 
       <div className="flex items-start justify-between gap-3 mb-4">
-        <div>
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-1">Your Stats</p>
-          <h2 className="font-display font-bold text-neon-green text-xl tracking-tight leading-tight">{entry.username}</h2>
+        <div className="flex items-center gap-3">
+          <Avatar url={entry.avatarUrl} username={entry.username} size="lg" />
+          <div>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-0.5">Your Stats</p>
+            <h2 className="font-display font-bold text-neon-green text-xl tracking-tight leading-tight">{entry.username}</h2>
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <div
