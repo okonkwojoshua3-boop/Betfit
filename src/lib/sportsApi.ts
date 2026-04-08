@@ -166,22 +166,22 @@ const ESPN_TODAY_FOOTBALL_LEAGUES = [
   // Top European leagues
   'eng.1', 'eng.2', 'eng.3', 'esp.1', 'esp.2', 'ger.1', 'ger.2',
   'ita.1', 'ita.2', 'fra.1', 'fra.2', 'ned.1', 'por.1', 'bel.1',
-  'sco.1', 'tur.1', 'gre.1', 'rus.1', 'ukr.1', 'swe.1', 'nor.1',
+  'sco.1', 'tur.1', 'gre.1', 'rus.1', 'swe.1', 'nor.1',
   'den.1', 'sui.1', 'aut.1', 'cze.1', 'pol.1', 'srb.1', 'cro.1',
   // European cups
-  'uefa.champions_league', 'uefa.europa', 'uefa.europa.conf',
-  'eng.fa_cup', 'eng.league_cup', 'esp.copa_del_rey',
+  'uefa.champions', 'uefa.europa', 'uefa.europa.conf',
+  'eng.fa', 'eng.league_cup', 'esp.copa_del_rey',
   'ger.dfb_pokal', 'ita.coppa_italia', 'fra.coupe_de_france',
   // International
   'fifa.friendly', 'UEFA.Nations', 'uefa.nations',
-  'fifa.worldq.europe', 'fifa.worldq.conmebol', 'fifa.worldq.concacaf',
+  'uefa.worldq', 'fifa.worldq.conmebol', 'fifa.worldq.concacaf',
   'fifa.worldq.afc', 'fifa.worldq.caf',
-  'UEFA.EURO', 'fifa.world', 'conmebol.america', 'concacaf.gold', 'africa.nations',
+  'UEFA.EURO', 'fifa.world', 'conmebol.america', 'concacaf.gold', 'caf.nations',
   // Americas
   'usa.1', 'mex.1', 'bra.1', 'arg.1', 'col.1', 'chi.1', 'ecu.1',
-  'usa.open', 'concacaf.leagues_cup',
+  'usa.open', 'concacaf.league',
   // Asia / Middle East / Africa
-  'sau.1', 'uae.pro', 'qat.1', 'jpn.1', 'kor.1', 'aus.1', 'chn.super_league',
+  'ksa.1', 'jpn.1', 'aus.1', 'chn.1',
   // South Africa
   'rsa.1',
 ]
@@ -464,22 +464,22 @@ const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports'
 const ESPN_FOOTBALL_LEAGUES = [
   'eng.1', 'esp.1', 'ger.1', 'ita.1', 'fra.1',
   'ned.1', 'por.1', 'tur.1', 'eng.2',
-  'uefa.champions_league', 'uefa.europa', 'uefa.europa.conf',
+  'uefa.champions', 'uefa.europa', 'uefa.europa.conf',
   'fifa.friendly', 'UEFA.Nations', 'uefa.nations',
-  'fifa.worldq.europe', 'fifa.worldq.conmebol', 'fifa.worldq.concacaf',
+  'uefa.worldq', 'fifa.worldq.conmebol', 'fifa.worldq.concacaf',
   'fifa.worldq.afc', 'fifa.worldq.caf',
   'UEFA.EURO', 'fifa.world', 'conmebol.america', 'concacaf.gold',
-  'africa.nations', 'eng.fa_cup', 'ger.dfb_pokal', 'esp.copa_del_rey',
+  'caf.nations', 'eng.fa', 'ger.dfb_pokal', 'esp.copa_del_rey',
   'ita.coppa_italia', 'fra.coupe_de_france',
 ]
 
 const ESPN_SUMMARY_LEAGUES = [
   'fifa.friendly', 'UEFA.Nations', 'uefa.nations',
-  'fifa.worldq.europe', 'fifa.worldq.conmebol', 'fifa.worldq.concacaf',
+  'uefa.worldq', 'fifa.worldq.conmebol', 'fifa.worldq.concacaf',
   'fifa.worldq.afc', 'fifa.worldq.caf', 'UEFA.EURO', 'fifa.world',
   'eng.1', 'esp.1', 'ger.1', 'ita.1', 'fra.1',
-  'ned.1', 'por.1', 'uefa.champions_league', 'uefa.europa',
-  'concacaf.gold', 'africa.nations',
+  'ned.1', 'por.1', 'uefa.champions', 'uefa.europa',
+  'concacaf.gold', 'caf.nations',
 ]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

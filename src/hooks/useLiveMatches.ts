@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import type { Match } from '../types'
 import { fetchTodayMatches, fetchAllSportsLive, mergeMatches } from '../lib/sportsApi'
 
-const SESSION_KEY = 'betfit_today_matches_v4'
+const SESSION_KEY = 'betfit_today_matches_v5'
 const today = new Date().toISOString().slice(0, 10) // 'YYYY-MM-DD'
 const POLL_INTERVAL_MS = 60_000 // refresh live minutes every 60s
 
