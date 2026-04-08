@@ -40,6 +40,10 @@ export function useProof(betId: string) {
       setUploadError('Not signed in. Please refresh and try again.')
       return false
     }
+    if (!file.type.startsWith('video/')) {
+      setUploadError('Only video files are accepted as proof.')
+      return false
+    }
     const MAX_MB = 50
     if (file.size > MAX_MB * 1024 * 1024) {
       setUploadError(`File is too large (${(file.size / 1024 / 1024).toFixed(0)}MB). Max is ${MAX_MB}MB. Try compressing the video first.`)

@@ -81,6 +81,17 @@ export interface BetParticipant {
   joinedAt: string
 }
 
+export interface LeaderboardEntry {
+  userId: string
+  username: string
+  wins: number
+  losses: number
+  draws: number
+  winRate: number
+  punishmentsOwed: number
+  punishmentsCompleted: number
+}
+
 export interface Bet {
   id: string
   matchId: string

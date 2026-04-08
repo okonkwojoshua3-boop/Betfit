@@ -117,25 +117,25 @@ function ProofSection({
     return (
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xl">📸</span>
+          <span className="text-xl">🎥</span>
           <h3 className="font-bold text-white">Upload Proof</h3>
         </div>
         <p className="text-sm text-slate-400 mb-4">
-          <span className="text-amber-400 font-semibold">{loserName}</span> — take a photo or video showing you completed{' '}
+          <span className="text-amber-400 font-semibold">{loserName}</span> — record a video of yourself completing{' '}
           <span className="text-white font-semibold">{punishmentText}</span>.
         </p>
         {uploadError && (
           <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-3">{uploadError}</p>
         )}
-        <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFileChange} />
+        <input ref={fileRef} type="file" accept="video/*" capture="environment" className="hidden" onChange={handleFileChange} />
         <button
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
           className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-black font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
         >
-          {uploading ? 'Uploading…' : '📷 Choose Photo or Video'}
+          {uploading ? 'Uploading…' : '🎥 Record or Upload Video'}
         </button>
-        <p className="text-xs text-slate-600 text-center mt-2">Photo or video · max 50MB</p>
+        <p className="text-xs text-slate-600 text-center mt-2">Video only · max 50MB</p>
       </div>
     )
   }
@@ -159,7 +159,8 @@ function ProofSection({
         <input
           ref={fileRef}
           type="file"
-          accept="image/*,video/*"
+          accept="video/*"
+          capture="environment"
           className="hidden"
           onChange={(e) => { clearProof(); handleFileChange(e) }}
         />
@@ -168,7 +169,7 @@ function ProofSection({
           disabled={uploading}
           className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-black font-bold py-3 rounded-xl transition-colors"
         >
-          {uploading ? 'Uploading…' : '📷 Re-upload Proof'}
+          {uploading ? 'Uploading…' : '🎥 Re-upload Video'}
         </button>
       </div>
     )
