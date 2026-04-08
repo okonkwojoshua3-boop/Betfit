@@ -692,19 +692,40 @@ export default function BetDetail() {
 
       {/* Completed */}
       {bet.status === 'completed' && (
-        <div
-          className="rounded-2xl px-5 py-4 flex items-center justify-between animate-fade-up animate-fill-both animate-delay-200"
-          style={{ background: 'rgba(34,214,114,0.06)', border: '1px solid rgba(34,214,114,0.15)' }}
-        >
-          <div className="flex items-center gap-2 text-neon-green font-semibold text-sm">
-            <span>✅</span>
-            <span>Bet settled</span>
+        <div className="space-y-3 animate-fade-up animate-fill-both animate-delay-200">
+          <div
+            className="rounded-2xl px-5 py-4 flex items-center justify-between"
+            style={{ background: 'rgba(34,214,114,0.06)', border: '1px solid rgba(34,214,114,0.15)' }}
+          >
+            <div className="flex items-center gap-2 text-neon-green font-semibold text-sm">
+              <span>✅</span>
+              <span>Bet settled</span>
+            </div>
+            <span className="text-slate-500 text-xs">
+              {bet.resolvedAt
+                ? new Date(bet.resolvedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                : '—'}
+            </span>
           </div>
-          <span className="text-slate-500 text-xs">
-            {bet.resolvedAt
-              ? new Date(bet.resolvedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-              : '—'}
-          </span>
+          <button
+            onClick={() =>
+              navigate('/create', {
+                state: {
+                  rematch: {
+                    punishmentId: bet.punishment.punishmentId,
+                    punishmentReps: bet.punishment.reps,
+                    opponent: participants.find((p) => p.userId !== profile?.id)
+                      ? { id: participants.find((p) => p.userId !== profile?.id)!.userId, username: participants.find((p) => p.userId !== profile?.id)!.username }
+                      : null,
+                  },
+                },
+              })
+            }
+            className="w-full font-bold py-3 rounded-2xl text-sm transition-all duration-200 active:scale-[0.98]"
+            style={{ background: 'linear-gradient(135deg,#22D672,#16A350)', color: '#04080F', boxShadow: '0 2px 16px rgba(34,214,114,0.2)' }}
+          >
+            🔄 Rematch
+          </button>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { PUNISHMENTS, formatPunishment } from '../data/punishments'
 import { useBets } from '../store/BetContext'
 import { useAuth } from '../store/AuthContext'
@@ -38,10 +38,17 @@ today.setHours(0, 0, 0, 0)
 
 export default function CreateBet() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const rematch = (location.state as { rematch?: { punishmentId: string; punishmentReps: number; opponent: { id: string; username: string } | null } } | null)?.rematch ?? null
+
   const { addBet } = useBets()
   const { profile } = useAuth()
-  const [step, setStep] = useState<Step>(1)
-  const [state, setState] = useState<WizardState>(INITIAL)
+  const [step, setStep] = useState<Step>(rematch ? 2 : 1)
+  const [state, setState] = useState<WizardState>(
+    rematch
+      ? { ...INITIAL, punishmentId: rematch.punishmentId, punishmentReps: rematch.punishmentReps }
+      : INITIAL
+  )
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const liveMatches = useLiveMatches()
@@ -49,7 +56,7 @@ export default function CreateBet() {
   // Opponent search
   const [opponentQuery, setOpponentQuery] = useState('')
   const [opponentResults, setOpponentResults] = useState<{ id: string; username: string }[]>([])
-  const [selectedOpponent, setSelectedOpponent] = useState<{ id: string; username: string } | null>(null)
+  const [selectedOpponent, setSelectedOpponent] = useState<{ id: string; username: string } | null>(rematch?.opponent ?? null)
   const [searching, setSearching] = useState(false)
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [notifiedOpponent, setNotifiedOpponent] = useState(false)
