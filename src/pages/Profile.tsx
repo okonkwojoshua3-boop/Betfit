@@ -9,6 +9,7 @@ import {
   uploadAvatar,
 } from '../services/profileService'
 import Avatar from '../components/ui/Avatar'
+import { POPULAR_TEAMS, type TeamOption } from '../data/popularTeams'
 
 // ── Debounce hook ─────────────────────────────────────────────────────────────
 function useDebounce<T>(value: T, delay: number): T {
@@ -74,6 +75,138 @@ function StatPill({ value, label, color }: { value: number | string; label: stri
       <div className={`font-score text-2xl leading-none ${color}`}>{value}</div>
       <div className="text-[9px] text-slate-600 uppercase tracking-widest mt-1">{label}</div>
     </div>
+  )
+}
+
+// ── Team picker ───────────────────────────────────────────────────────────────
+function TeamPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const filtered = query.trim().length === 0
+    ? POPULAR_TEAMS
+    : POPULAR_TEAMS.filter((t) =>
+        t.name.toLowerCase().includes(query.toLowerCase()) ||
+        t.league.toLowerCase().includes(query.toLowerCase())
+      )
+
+  const selected = POPULAR_TEAMS.find((t) => t.name === value) ?? null
+
+  // Close on outside click
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    if (open) document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [open])
+
+  function select(team: TeamOption) {
+    onChange(team.name)
+    setQuery('')
+    setOpen(false)
+  }
+
+  function clear() {
+    onChange('')
+    setQuery('')
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      {/* Trigger / search input */}
+      <div
+        className="flex items-center gap-2.5 w-full rounded-xl px-3.5 py-2.5 cursor-text"
+        style={{
+          background: 'rgba(255,255,255,0.04)',
+          border: `1px solid ${open ? 'rgba(34,214,114,0.35)' : 'rgba(255,255,255,0.1)'}`,
+        }}
+        onClick={() => setOpen(true)}
+      >
+        {selected && !open ? (
+          <>
+            <TeamLogo url={selected.logo} name={selected.name} />
+            <span className="flex-1 text-sm text-white truncate">{selected.name}</span>
+            <span className="text-[10px] text-slate-600 shrink-0">{selected.league}</span>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); clear() }}
+              className="text-slate-500 hover:text-slate-300 transition-colors shrink-0 ml-1"
+              title="Clear"
+            >
+              ✕
+            </button>
+          </>
+        ) : (
+          <input
+            autoFocus={open}
+            type="text"
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
+            onFocus={() => setOpen(true)}
+            placeholder={selected ? selected.name : 'Search teams…'}
+            className="flex-1 bg-transparent text-sm text-white placeholder-slate-600 outline-none"
+          />
+        )}
+      </div>
+
+      {/* Dropdown */}
+      {open && (
+        <div
+          className="absolute left-0 right-0 top-full mt-1 rounded-xl overflow-hidden z-50"
+          style={{
+            background: 'linear-gradient(160deg,#111D30,#0D1525)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            maxHeight: '240px',
+            overflowY: 'auto',
+          }}
+        >
+          {filtered.length === 0 ? (
+            <p className="px-4 py-3 text-xs text-slate-500">No teams found</p>
+          ) : (
+            filtered.map((team) => (
+              <button
+                key={team.name}
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); select(team) }}
+                className="flex items-center gap-3 w-full px-3.5 py-2.5 text-left transition-colors hover:bg-white/[0.05]"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+              >
+                <TeamLogo url={team.logo} name={team.name} />
+                <span className="flex-1 text-sm text-white truncate">{team.name}</span>
+                <span className="text-[10px] text-slate-600 shrink-0">{team.league}</span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TeamLogo({ url, name }: { url: string; name: string }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) {
+    return (
+      <div
+        className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+        style={{ background: 'rgba(255,255,255,0.08)', color: '#94A3B8' }}
+      >
+        {name[0]}
+      </div>
+    )
+  }
+  return (
+    <img
+      src={url}
+      alt={name}
+      className="w-6 h-6 object-contain shrink-0"
+      onError={() => setFailed(true)}
+    />
   )
 }
 
@@ -175,17 +308,23 @@ export default function Profile() {
     setSaveSuccess(false)
     try {
       await updateProfile(profile.id, {
-        username:             username.trim(),
-        bio:                  bio.trim() || null,
-        favourite_team:       favTeam.trim() || null,
-        favourite_sport:      favSport || null,
+        username:              username.trim(),
+        bio:                   bio.trim() || null,
+        favourite_team:        favTeam.trim() || null,
+        favourite_sport:       favSport || null,
         notifications_enabled: notifs,
       })
       await refreshProfile()
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 2500)
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to save')
+      const msg = err instanceof Error ? err.message : 'Failed to save'
+      const needsMigration = msg.toLowerCase().includes('migration') || msg.toLowerCase().includes('column')
+      setSaveError(
+        needsMigration
+          ? 'Database not set up. Run supabase/profile_migration.sql in your Supabase SQL Editor.'
+          : msg
+      )
     } finally {
       setSaving(false)
     }
@@ -354,15 +493,7 @@ export default function Profile() {
         {/* Favourite team */}
         <div>
           <label className="block text-xs text-slate-400 mb-1.5 font-medium">Favourite Team <span className="text-slate-600">(optional)</span></label>
-          <input
-            type="text"
-            value={favTeam}
-            onChange={(e) => setFavTeam(e.target.value.slice(0, 40))}
-            maxLength={40}
-            placeholder="e.g. Arsenal, Lakers…"
-            className="w-full rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 outline-none transition-all"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
-          />
+          <TeamPicker value={favTeam} onChange={setFavTeam} />
         </div>
 
         {/* Save error */}

@@ -45,12 +45,39 @@ export type ProfileUpdate = {
 export async function updateProfile(userId: string, updates: ProfileUpdate): Promise<Profile> {
   const { data, error } = await supabase
     .from('profiles')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update(updates)
     .eq('id', userId)
-    .select('*')
+    .select('id, username, avatar_url, created_at, bio, notifications_enabled, favourite_team, favourite_sport')
     .single()
 
-  if (error) throw error
+  if (error) {
+    // Extended columns don't exist yet (migration not run) — fall back to safe base columns
+    const isMissingColumn =
+      error.code === '42703' ||
+      error.message?.toLowerCase().includes('column') ||
+      error.message?.toLowerCase().includes('does not exist') ||
+      error.message?.toLowerCase().includes('schema cache')
+
+    if (isMissingColumn) {
+      const baseUpdates: Record<string, unknown> = {}
+      if (updates.username  !== undefined) baseUpdates.username  = updates.username
+      if (updates.avatar_url !== undefined) baseUpdates.avatar_url = updates.avatar_url
+
+      if (Object.keys(baseUpdates).length === 0) {
+        throw new Error('Profile columns not found. Please run the profile_migration.sql in your Supabase SQL Editor.')
+      }
+
+      const { data: d2, error: e2 } = await supabase
+        .from('profiles')
+        .update(baseUpdates)
+        .eq('id', userId)
+        .select('id, username, avatar_url, created_at')
+        .single()
+      if (e2) throw e2
+      return d2 as Profile
+    }
+    throw error
+  }
   return data as Profile
 }
 
@@ -98,10 +125,14 @@ export async function uploadAvatar(userId: string, blob: Blob): Promise<string> 
     .from('avatars')
     .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
 
-  if (uploadError) throw uploadError
+  if (uploadError) {
+    if (uploadError.message?.toLowerCase().includes('bucket')) {
+      throw new Error('Avatar storage not set up. Run profile_migration.sql in your Supabase SQL Editor first.')
+    }
+    throw uploadError
+  }
 
   const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-  // Bust cache by appending a timestamp query param
   return `${data.publicUrl}?t=${Date.now()}`
 }
 

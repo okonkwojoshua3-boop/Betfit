@@ -56,6 +56,7 @@ CREATE POLICY "avatars: own delete"
   USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ── Update leaderboard RPC to include avatar_url ──────────────────────────────
+DROP FUNCTION IF EXISTS get_leaderboard_stats();
 CREATE OR REPLACE FUNCTION get_leaderboard_stats()
 RETURNS TABLE (
   user_id               uuid,
