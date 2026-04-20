@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../../store/AuthContext'
 import { isInAppBrowser } from '../../lib/browser'
 import InAppBrowserWarning from '../../components/ui/InAppBrowserWarning'
+import BetFitLogo from '../../assets/betfit-logo.svg'
 
 export default function LoginPage() {
   const { signInWithGoogle } = useAuth()
@@ -28,13 +29,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm relative">
         {/* Logo block */}
         <div className="text-center mb-10 animate-fade-up animate-fill-both">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl mb-6 shadow-glow-green"
-            style={{ background: 'linear-gradient(135deg, #0D1525, #111D30)', border: '1px solid rgba(34,214,114,0.2)' }}>
-            <span className="text-4xl">🏆</span>
-          </div>
-          <h1 className="font-display text-5xl font-bold tracking-tight text-white mb-2">
-            Bet<span className="gradient-text">Fit</span>
-          </h1>
+          <img src={BetFitLogo} alt="BetFit" className="h-10 w-auto mx-auto mb-4" />
           <p className="text-slate-500 text-sm">Bet on the match. Loser does the reps.</p>
         </div>
 

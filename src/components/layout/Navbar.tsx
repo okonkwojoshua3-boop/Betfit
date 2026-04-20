@@ -37,7 +37,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-full">
           {/* Logo */}
           <NavLink to="/dashboard" className="flex items-center shrink-0">
-            <img src={BetFitLogo} alt="BetFit" className="h-7 w-auto" />
+            <img src={BetFitLogo} alt="BetFit" className="h-6 sm:h-8 w-auto" />
           </NavLink>
 
           {/* Desktop nav — hidden on mobile */}
