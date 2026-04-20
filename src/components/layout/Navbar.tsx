@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useBets } from '../../store/BetContext'
 import { useAuth } from '../../store/AuthContext'
 import Avatar from '../ui/Avatar'
+import BetFitLogo from '../../assets/betfit-logo.svg'
 
 export default function Navbar() {
   const { getActiveBets, getPendingBets } = useBets()
@@ -35,13 +36,8 @@ export default function Navbar() {
       <div className="max-w-4xl mx-auto px-4" style={{ height: '60px' }}>
         <div className="flex items-center justify-between h-full">
           {/* Logo */}
-          <NavLink to="/dashboard" className="flex items-center gap-2.5 group shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-neon-green/10 border border-neon-green/20 flex items-center justify-center text-base transition-all duration-200 group-hover:bg-neon-green/20">
-              🏆
-            </div>
-            <span className="font-display font-bold text-xl text-white tracking-tight">
-              Bet<span className="gradient-text">Fit</span>
-            </span>
+          <NavLink to="/dashboard" className="flex items-center shrink-0">
+            <img src={BetFitLogo} alt="BetFit" className="h-7 w-auto" />
           </NavLink>
 
           {/* Desktop nav — hidden on mobile */}
