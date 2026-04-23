@@ -1,0 +1,58 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#060A12"/>
+
+  <!-- Subtle grid lines -->
+  <line x1="0" y1="210" x2="1200" y2="210" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+  <line x1="0" y1="420" x2="1200" y2="420" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+  <line x1="400" y1="0" x2="400" y2="630" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+  <line x1="800" y1="0" x2="800" y2="630" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+
+  <!-- Green glow blob (top centre) -->
+  <radialGradient id="glow1" cx="50%" cy="40%" r="40%">
+    <stop offset="0%" stop-color="#22D672" stop-opacity="0.12"/>
+    <stop offset="100%" stop-color="#22D672" stop-opacity="0"/>
+  </radialGradient>
+  <rect width="1200" height="630" fill="url(#glow1)"/>
+
+  <!-- Amber glow blob (bottom left) -->
+  <radialGradient id="glow2" cx="15%" cy="80%" r="30%">
+    <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.07"/>
+    <stop offset="100%" stop-color="#F59E0B" stop-opacity="0"/>
+  </radialGradient>
+  <rect width="1200" height="630" fill="url(#glow2)"/>
+
+  <!-- Card background -->
+  <rect x="80" y="80" width="1040" height="470" rx="24" fill="#0D1525" fill-opacity="0.8" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+
+  <!-- BetFit "B" icon (scaled up ~4x, centred at ~x=180 y=315) -->
+  <g transform="translate(96, 185) scale(4.5)">
+    <path d="M7.57031 8.32224C6.42617 8.40745 1.15395 8.60696 0.286291 8.25902C-0.0272162 7.9277 0.00759919 6.96388 0.0489529 6.56289C0.154757 5.53814 -0.147201 1.38583 0.305142 0.706144C1.30519 0.201448 9.68988 0.713951 11.4526 0.530302C12.7506 0.395026 16.263 0.656157 17.5353 1.06962C19.9877 1.84309 22.0193 3.58131 23.1621 5.8838C23.9836 7.50728 24.5781 9.78295 23.9464 11.5369C23.7602 12.0538 23.6082 12.4425 23.5153 12.9859C26.1558 13.8652 28.0152 15.6729 29.2923 18.09C31.6962 22.6396 29.0983 27.6791 24.9057 29.9771C24.4763 30.2124 22.994 30.83 22.6209 30.3561C22.4743 29.2733 22.5367 27.26 22.5482 26.1142C22.5578 25.1547 22.4842 24.0158 22.4992 23.1053C20.0376 23.2295 17.5807 23.4666 15.1298 23.464C15.2518 24.0585 15.2195 29.8275 15.1512 30.6156C12.6789 30.5118 10.0965 30.6676 7.60878 30.5588C7.54051 29.773 7.47903 23.9953 7.6402 23.3973C6.67013 23.4322 0.679278 23.5661 0.20766 23.2663C-0.0742587 22.6325 -0.119858 15.982 0.393454 15.5985C1.04671 15.4126 6.52178 15.5174 7.5586 15.5138L7.55876 10.8053C7.5546 10.292 7.49083 8.73986 7.57031 8.32224ZM7.7415 23.1825C8.48876 22.8975 13.8867 23.0065 15.0162 23.0329C15.2342 20.8887 14.9037 17.954 14.9905 15.8328C12.8107 16.0101 9.95151 15.8987 7.67425 15.9768C7.80825 16.7341 7.69234 17.2788 7.7111 17.9805C7.74473 19.2377 7.55486 22.0269 7.7415 23.1825Z" fill="#22D672"/>
+  </g>
+
+  <!-- "BetFit" wordmark text -->
+  <text x="270" y="290" font-family="Georgia, serif" font-size="112" font-weight="700" letter-spacing="-3" fill="white">Bet</text>
+  <text x="530" y="290" font-family="Georgia, serif" font-size="112" font-weight="700" letter-spacing="-3" fill="#22D672">Fit</text>
+
+  <!-- Tagline -->
+  <text x="270" y="350" font-family="Arial, sans-serif" font-size="28" fill="#64748B" letter-spacing="0.5">Bet on the match. Loser does the reps.</text>
+
+  <!-- Divider -->
+  <line x1="270" y1="390" x2="920" y2="390" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+
+  <!-- Feature pills -->
+  <!-- Pill 1 -->
+  <rect x="270" y="414" width="168" height="42" rx="21" fill="rgba(34,214,114,0.08)" stroke="rgba(34,214,114,0.2)" stroke-width="1"/>
+  <text x="354" y="441" font-family="Arial, sans-serif" font-size="18" fill="#22D672" text-anchor="middle">⚽ Live Matches</text>
+
+  <!-- Pill 2 -->
+  <rect x="454" y="414" width="176" height="42" rx="21" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <text x="542" y="441" font-family="Arial, sans-serif" font-size="18" fill="#94A3B8" text-anchor="middle">🤝 Invite Friends</text>
+
+  <!-- Pill 3 -->
+  <rect x="646" y="414" width="168" height="42" rx="21" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <text x="730" y="441" font-family="Arial, sans-serif" font-size="18" fill="#94A3B8" text-anchor="middle">💪 Pay the Price</text>
+
+  <!-- URL bottom right -->
+  <text x="1120" y="512" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.2)" text-anchor="end">betfit.vercel.app</text>
+</svg>
